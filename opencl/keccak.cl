@@ -4,6 +4,67 @@
 
 #define SPH_C64(x)    ((ulong)(x))
 
+#ifndef __cryptsha_opt_
+#define __cryptsha_opt_
+//Copied from common-opencl.h
+#define SWAP(n) \
+            (((n) << 56)                      \
+          | (((n) & 0xff00) << 40)            \
+          | (((n) & 0xff0000) << 24)          \
+          | (((n) & 0xff000000) << 8)         \
+          | (((n) >> 8) & 0xff000000)         \
+          | (((n) >> 24) & 0xff0000)          \
+          | (((n) >> 40) & 0xff00)            \
+          | ((n) >> 56))
+
+#define SWAP64_V(n)     SWAP(n)
+
+#define UNKNOWN                 0
+#define CPU                     1
+#define GPU                     2
+#define ACCELERATOR             4
+#define AMD                     64
+#define NVIDIA                  128
+#define INTEL                   256
+#define AMD_GCN                 1024
+#define AMD_VLIW4               2048
+#define AMD_VLIW5               4096
+#define NO_BYTE_ADDRESSABLE     8192
+
+#define cpu(n)                  ((n & CPU) == (CPU))
+#define gpu(n)                  ((n & GPU) == (GPU))
+#define gpu_amd(n)              ((n & AMD) && gpu(n))
+#define gpu_amd_64(n)           (0)
+#define gpu_nvidia(n)           ((n & NVIDIA) && gpu(n))
+#define gpu_intel(n)            ((n & INTEL) && gpu(n))
+#define cpu_amd(n)              ((n & AMD) && cpu(n))
+#define amd_gcn(n)              ((n & AMD_GCN) && gpu_amd(n))
+#define amd_vliw4(n)            ((n & AMD_VLIW4) && gpu_amd(n))
+#define amd_vliw5(n)            ((n & AMD_VLIW5) && gpu_amd(n))
+#define no_byte_addressable(n)  (n & NO_BYTE_ADDRESSABLE)
+
+#if gpu_amd_64(DEVICE_INFO)
+        #pragma OPENCL EXTENSION cl_amd_media_ops : enable
+        #define ror_o(x, n)       amd_bitalign(x, x, (uint64_t) n)
+        #define Ch(x, y, z)     amd_bytealign(x, y, z)
+        #define Maj(x, y, z)    amd_bytealign(z ^ x, y, x )
+        #define SWAP64(n)       (as_ulong(as_uchar8(n).s76543210))
+#elif gpu_amd(DEVICE_INFO)
+        #define Ch(x,y,z)       bitselect(z, y, x)
+        #define Maj(x,y,z)      bitselect(x, y, z ^ x)
+        #define ror_o(x, n)       rotate(x, (uint64_t) 64-n)
+        #define SWAP64(n)       (as_ulong(as_uchar8(n).s76543210))
+#else
+        #if gpu_nvidia(DEVICE_INFO)
+            #pragma OPENCL EXTENSION cl_nv_pragma_unroll : enable
+        #endif
+        #define Ch(x,y,z)       ((x & y) ^ ( (~x) & z))
+        #define Maj(x,y,z)      ((x & y) ^ (x & z) ^ (y & z))
+        #define ror_o(x, n)       ((x >> n) | (x << (64-n)))
+        #define SWAP64(n)       SWAP(n)
+#endif
+#endif // __cryptsha_opt_
+
 typedef struct {
 	unsigned char buf[144];    /* first field, for alignment */
 	size_t ptr, lim;
@@ -54,7 +115,7 @@ constant ulong RC[] = {
 #define a34   (kc->u.wide[23])
 #define a44   (kc->u.wide[24])
 
-ulong
+inline ulong
 dec64le_aligned(const void *src)
 {
 	return (ulong)(((const unsigned char *)src)[0])
@@ -92,8 +153,11 @@ dec64le_aligned(const void *src)
 	}
 
 #define SPH_T64(x)    ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
-#define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
-#define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
+// trying better implementations of ROR/ROL
+//#define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
+#define SPH_ROTL64(x, n)   ror_o((x), 64-(n))
+//#define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
+#define SPH_ROTR64(x, n)   ror_o((x), (n))
 #define INPUT_BUF144   INPUT_BUF(144)
 #define INPUT_BUF136   INPUT_BUF(136)
 #define INPUT_BUF104   INPUT_BUF(104)
@@ -364,7 +428,6 @@ void keccak_core_80(keccak_context *kc, const void *data)
 	buf = kc->buf;
 
 // two passes
-	size_t clen = 72;
 #pragma unroll
 	for (int i = 0; i < 72; i++) buf[i] = ((const unsigned char *)data)[i];
 	data = (const unsigned char *)data + 72;
@@ -405,7 +468,7 @@ void keccak_core_end_64_8(keccak_context *kc, const void *data)
 }
 
 // d = 64, lim = 72, ub = 0. n = 0
-	static void keccak_close(keccak_context *kc, void *dst)
+	void keccak_close(keccak_context *kc, void *dst)
 	{
 		union {
 			unsigned char tmp[72 + 1];

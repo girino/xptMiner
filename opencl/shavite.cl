@@ -9,7 +9,7 @@ typedef struct {
 
 #define C32(x)    ((uint)(x))
 
-__constant const uint IV512shavite[] = {
+__constant const uint16 IV512shavite = {
 	C32(0x72FCCDD8), C32(0x79CA4727), C32(0x128A077B), C32(0x40D55AEC),
 	C32(0xD1901A06), C32(0x430AE307), C32(0xB29F5CD1), C32(0xDF07FBFC),
 	C32(0x8E45D73D), C32(0x681AB538), C32(0xBDE86578), C32(0xDD577E47),
@@ -19,8 +19,9 @@ __constant const uint IV512shavite[] = {
 static void
 shavite_init(shavite_context *sc)
 {
-#pragma unroll
-	for (int i = 0; i < 16; i++) sc->h[i] = IV512shavite[i];
+//#pragma unroll
+//	for (int i = 0; i < 16; i++) sc->h[i] = IV512shavite[i];
+	*((uint16*)(sc->h)) = IV512shavite;
 }
 
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
@@ -970,8 +971,11 @@ kernel void shavite512(global ulong * in, global ulong * out) {
 	ulong hash[8];
 
 	shavite_init(&ctx);
-	for (int i = 0; i < 8; i++) data[i] = in[i];
+	//for (int i = 0; i < 8; i++) data[i] = in[i];
+	*((ulong8*)data) = *((global ulong8*)in);
 	shavite_core_64(&ctx, data);
 	shavite_close(&ctx, hash);
-	for (int i = 0; i < 8; i++) out[i] = hash[i];
+//	for (int i = 0; i < 8; i++) out[i] = hash[i];
+	*((global ulong8*)out) = *((ulong8*)hash);
+
 }
