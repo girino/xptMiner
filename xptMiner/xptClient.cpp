@@ -38,6 +38,10 @@ int xptClient_openConnection(char *IP, int Port)
   addr.sin_port=htons(Port);
   addr.sin_addr.s_addr = inet_addr(IP);
   int result = connect(s, (sockaddr*)&addr, sizeof(sockaddr_in));
+	if( result )
+	{
+		return SOCKET_ERROR;
+	}
 #endif
 
 	return s;
