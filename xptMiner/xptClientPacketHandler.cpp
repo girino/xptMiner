@@ -172,6 +172,7 @@ bool xptClient_processPacket_shareAck(xptClient_t* xptClient)
 	{
 		// share not accepted by server
 		printf("Invalid share\n");
+		invalidShareCount++;
 		if( rejectReason[0] != '\0' )
 			printf("Reason: %s\n", rejectReason);
 	}
