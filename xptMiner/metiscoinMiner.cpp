@@ -30,10 +30,13 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 	files_keccak.push_back("opencl/metis.cl");
 	files_keccak.push_back("opencl/miner.cl");
 	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak);
-	kernel_all = program->getKernel("metiscoin_process");
+#ifdef SINGLE_KERNEL
+	kernel_all = program->getKernel("metiscoin_process_noinit");
+#else
 	kernel_keccak_noinit = program->getKernel("keccak_step_noinit");
 	kernel_shavite = program->getKernel("shavite_step");
 	kernel_metis = program->getKernel("metis_step");
+#endif
 #ifdef VALIDATE_ALGORITHMS
 	kernel_validate = program->getKernel("metis512");
 #endif
@@ -43,8 +46,10 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 	u = device->getContext()->createBuffer(25*sizeof(cl_ulong), CL_MEM_READ_WRITE, NULL);
 	buff = device->getContext()->createBuffer(4, CL_MEM_READ_WRITE, NULL);
 
+#ifndef SINGLE_KERNEL
 	hashes = device->getContext()->createBuffer(
 			64 * STEP_SIZE, CL_MEM_READ_WRITE, NULL);
+#endif
 	out = device->getContext()->createBuffer(sizeof(cl_uint) * 255, CL_MEM_READ_WRITE, NULL);
 	out_count = device->getContext()->createBuffer(sizeof(cl_uint), CL_MEM_READ_WRITE, NULL);
 	q = device->getContext()->createCommandQueue(device);
@@ -73,7 +78,7 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 #endif
 		if( block->height != monitorCurrentBlockHeight )
 			break;
-
+#ifndef SINGLE_KERNEL
 		//keccak
 		//kernel void keccak_step_noinit(constant const ulong* u, constant const char* buff, global ulong* out, uint begin_nonce)
 		kernel_keccak_noinit->resetArgs();
@@ -82,12 +87,14 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		kernel_keccak_noinit->addGlobalArg(hashes);
 		kernel_keccak_noinit->addScalarUInt(n * STEP_SIZE);
 
+#endif
 		sph_keccak512_context	 ctx_keccak;
 		sph_keccak512_init(&ctx_keccak);
 		sph_keccak512(&ctx_keccak, &block->version, 80);
 
 		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
 		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
+#ifndef SINGLE_KERNEL
 		q->enqueueKernel1D(kernel_keccak_noinit, STEP_SIZE,
 				kernel_keccak_noinit->getWorkGroupSize(device));
 
@@ -118,10 +125,26 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		kernel_metis->addScalarUInt(n*STEP_SIZE);
 		kernel_metis->addScalarUInt(target);
 
+#endif
 		cl_uint out_count_tmp = 0;
 		q->enqueueWriteBuffer(out_count, &out_count_tmp, sizeof(cl_uint));
+#ifdef SINGLE_KERNEL
+		kernel_all->resetArgs();
+		kernel_all->addGlobalArg(u);
+		kernel_all->addGlobalArg(buff);
+		kernel_all->addGlobalArg(out);
+		kernel_all->addGlobalArg(out_count);
+		kernel_all->addScalarUInt(n*STEP_SIZE);
+		kernel_all->addScalarUInt(target);
+
+		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
+		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
+		q->enqueueKernel1D(kernel_all, STEP_SIZE,
+				kernel_all->getWorkGroupSize(device));
+#else
 		q->enqueueKernel1D(kernel_metis, STEP_SIZE,
 				kernel_metis->getWorkGroupSize(device));
+#endif
 		q->enqueueReadBuffer(out, out_tmp, sizeof(cl_uint) * 255);
 		q->enqueueReadBuffer(out_count, &out_count_tmp, sizeof(cl_uint));
 		q->finish();
@@ -135,12 +158,17 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		totalCollisionCount += STEP_SIZE;
 #ifdef MEASURE_TIME
 		uint32 end = getTimeMilliseconds();
+#ifdef SINGLE_KERNEL
+		printf("Elapsed time: %d ms\n", (end-begin));
+#else
 		printf("Elapsed time: %d (k = %d, s = %d, m = %d) ms\n", (end-begin), (end_keccak-begin), (end_shavite-end_keccak), (end-end_shavite));
+#endif
 #endif
 
 #ifdef VALIDATE_ALGORITHMS
 		uint32 begin_validation = getTimeMilliseconds();
 
+#ifndef SINGLE_KERNEL
 		cl_ulong *tmp_hashes = new cl_ulong[8 * STEP_SIZE];
 		q->enqueueReadBuffer(hashes, tmp_hashes,
 				sizeof(cl_ulong) * 8 * STEP_SIZE);
@@ -196,6 +224,7 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		}
 		}
 		delete tmp_hashes;
+#endif
 		block->nonce = 0;
 		uint32 end_validation = getTimeMilliseconds();
 		printf("Validation time: %d ms\n", (end_validation-begin_validation));

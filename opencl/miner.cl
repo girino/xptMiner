@@ -51,6 +51,54 @@ kernel void metiscoin_process(global char* in, global uint* out, global uint* ou
 
 }
 
+kernel void metiscoin_process_noinit(constant const ulong* u, constant const char* buff, global uint* out, global uint* outcount, uint begin_nonce, uint target) {
+
+	size_t id = get_global_id(0);
+	uint nonce = (uint)id + begin_nonce;
+	uint hnonce = nonce / 0x8000;
+	uint lnonce = nonce % 0x8000;
+	nonce = hnonce * 0x10000 + lnonce;
+
+	ulong hash0[8];
+	ulong hash1[8];
+	ulong hash2[8];
+
+	// inits context
+	keccak_context	 ctx_keccak;
+	ctx_keccak.lim = 72;
+	ctx_keccak.ptr = 8;
+#pragma unroll
+	for (int i = 0; i < 4; i++) {
+		ctx_keccak.buf[i] = buff[i];
+	}
+	*((uint*)(ctx_keccak.buf+4)) = nonce;
+#pragma unroll
+	for (int i = 0; i < 25; i++) {
+		ctx_keccak.u.wide[i] = u[i];
+	}
+	// keccak
+	keccak_close(&ctx_keccak, hash0);
+
+	shavite_context ctx_shavite;
+	// shavite
+	shavite_init(&ctx_shavite);
+	shavite_core_64(&ctx_shavite, hash0);
+	shavite_close(&ctx_shavite, hash1);
+
+	metis_context ctx_metis;
+	// metis
+	metis_init(&ctx_metis);
+	metis_core_64(&ctx_metis, hash1);
+	metis_close(&ctx_metis, hash2);
+
+	if( *(uint*)((uchar*)hash2+28) <= target )
+	{
+		uint pos = atomic_inc(outcount); //saves first pos for counter
+		out[pos] = nonce;
+	}
+
+}
+
 kernel void keccak_step(constant const char* in, global ulong* out, uint begin_nonce) {
 
 	size_t id = get_global_id(0);
