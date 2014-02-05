@@ -328,7 +328,7 @@ void xptMiner_xptQueryWorkLoop()
 				  {
 					speedRate = (double)totalCollisionCount /** 32768.0*/ / (double)passedSeconds / 1000.0;
 				  }
-				  printf("kHash/s: %.2lf Shares total: %ld (Valid: %ld, Invalid: %ld)\n", speedRate, totalShareCount, (totalCollisionCount-invalidShareCount), invalidShareCount);
+				  printf("kHash/s: %.2lf Shares total: %ld (Valid: %ld, Invalid: %ld)\n", speedRate, totalShareCount, (totalShareCount-invalidShareCount), invalidShareCount);
 				}
 
 			}
