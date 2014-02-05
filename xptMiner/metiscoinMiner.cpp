@@ -137,6 +137,8 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		kernel_all->addScalarUInt(n*STEP_SIZE);
 		kernel_all->addScalarUInt(target);
 
+		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
+		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
 		q->enqueueKernel1D(kernel_all, STEP_SIZE,
 				kernel_all->getWorkGroupSize(device));
 #else
