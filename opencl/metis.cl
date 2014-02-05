@@ -2,67 +2,6 @@
 #   include "OpenCLKernel.hpp"
 #endif
 
-#ifndef __cryptsha_opt_
-#define __cryptsha_opt_
-//Copied from common-opencl.h
-#define SWAP(n) \
-            (((n) << 56)                      \
-          | (((n) & 0xff00) << 40)            \
-          | (((n) & 0xff0000) << 24)          \
-          | (((n) & 0xff000000) << 8)         \
-          | (((n) >> 8) & 0xff000000)         \
-          | (((n) >> 24) & 0xff0000)          \
-          | (((n) >> 40) & 0xff00)            \
-          | ((n) >> 56))
-
-#define SWAP64_V(n)     SWAP(n)
-
-#define UNKNOWN                 0
-#define CPU                     1
-#define GPU                     2
-#define ACCELERATOR             4
-#define AMD                     64
-#define NVIDIA                  128
-#define INTEL                   256
-#define AMD_GCN                 1024
-#define AMD_VLIW4               2048
-#define AMD_VLIW5               4096
-#define NO_BYTE_ADDRESSABLE     8192
-
-#define cpu(n)                  ((n & CPU) == (CPU))
-#define gpu(n)                  ((n & GPU) == (GPU))
-#define gpu_amd(n)              ((n & AMD) && gpu(n))
-#define gpu_amd_64(n)           (0)
-#define gpu_nvidia(n)           ((n & NVIDIA) && gpu(n))
-#define gpu_intel(n)            ((n & INTEL) && gpu(n))
-#define cpu_amd(n)              ((n & AMD) && cpu(n))
-#define amd_gcn(n)              ((n & AMD_GCN) && gpu_amd(n))
-#define amd_vliw4(n)            ((n & AMD_VLIW4) && gpu_amd(n))
-#define amd_vliw5(n)            ((n & AMD_VLIW5) && gpu_amd(n))
-#define no_byte_addressable(n)  (n & NO_BYTE_ADDRESSABLE)
-
-#if gpu_amd_64(DEVICE_INFO)
-        #pragma OPENCL EXTENSION cl_amd_media_ops : enable
-        #define ror_o(x, n)       amd_bitalign(x, x, (uint64_t) n)
-        #define Ch(x, y, z)     amd_bytealign(x, y, z)
-        #define Maj(x, y, z)    amd_bytealign(z ^ x, y, x )
-        #define SWAP64(n)       (as_ulong(as_uchar8(n).s76543210))
-#elif gpu_amd(DEVICE_INFO)
-        #define Ch(x,y,z)       bitselect(z, y, x)
-        #define Maj(x,y,z)      bitselect(x, y, z ^ x)
-        #define ror_o(x, n)       rotate(x, (uint64_t) 64-n)
-        #define SWAP64(n)       (as_ulong(as_uchar8(n).s76543210))
-#else
-        #if gpu_nvidia(DEVICE_INFO)
-            #pragma OPENCL EXTENSION cl_nv_pragma_unroll : enable
-        #endif
-        #define Ch(x,y,z)       ((x & y) ^ ( (~x) & z))
-        #define Maj(x,y,z)      ((x & y) ^ (x & z) ^ (y & z))
-        #define ror_o(x, n)       ((x >> n) | (x << (64-n)))
-        #define SWAP64(n)       SWAP(n)
-#endif
-#endif // __cryptsha_opt_
-
 __constant const uint IV512metis[] = {
 	(0x8807a57e), (0xe616af75), (0xc5d3e4db),
 	(0xac9ab027), (0xd915f117), (0xb6eecc54),
@@ -543,14 +482,10 @@ void metis_init(metis_context* sc) {
 		/* */ \
 	}
 
-#if gpu_amd_64(DEVICE_INFO) || gpu_amd(DEVICE_INFO)
-#define my_dec32be(src) as_uint(((uchar4*)(src))[0].s3210)
-#else
 #define my_dec32be(src) 	(((uint)(((const unsigned char *)src)[0]) << 24) \
 							| ((uint)(((const unsigned char *)src)[1]) << 16) \
 							| ((uint)(((const unsigned char *)src)[2]) << 8) \
 							| (uint)(((const unsigned char *)src)[3]))
-#endif
 
 void metis_core_64(metis_context *sc, const void *vdata)
 {
@@ -737,27 +672,28 @@ void metis_core_64(metis_context *sc, const void *vdata)
 	SMIX(S[0], S[1], S[2], S[3]);
 }
 
-//inline void
-//enc32be(void *dst, uint val)
-//{
-//#if gpu_amd_64(DEVICE_INFO) || gpu_amd(DEVICE_INFO)
-//	*((uchar4*)dst) = as_uchar4(val).s3210;
-//#else
-//	((unsigned char *)dst)[0] = (val >> 24);
-//	((unsigned char *)dst)[1] = (val >> 16);
-//	((unsigned char *)dst)[2] = (val >> 8);
-//	((unsigned char *)dst)[3] = val;
-//#endif
-//}
+void
+enc64be(void *dst, ulong val)
+{
+	((unsigned char *)dst)[0] = (val >> 56);
+	((unsigned char *)dst)[1] = (val >> 48);
+	((unsigned char *)dst)[2] = (val >> 40);
+	((unsigned char *)dst)[3] = (val >> 32);
+	((unsigned char *)dst)[4] = (val >> 24);
+	((unsigned char *)dst)[5] = (val >> 16);
+	((unsigned char *)dst)[6] = (val >> 8);
+	((unsigned char *)dst)[7] = val;
+}
 
-#if gpu_amd_64(DEVICE_INFO) || gpu_amd(DEVICE_INFO)
-#define enc32be(dst, val) {*((uchar4*)(dst)) = as_uchar4(val).s3210;}
-#else
-#define enc32be(dst, val) { ((unsigned char *)dst)[0] = (val >> 24); \
-	((unsigned char *)dst)[1] = (val >> 16); \
-	((unsigned char *)dst)[2] = (val >> 8); \
-	((unsigned char *)dst)[3] = val; }
-#endif
+
+void
+enc32be(void *dst, uint val)
+{
+	((unsigned char *)dst)[0] = (val >> 24);
+	((unsigned char *)dst)[1] = (val >> 16);
+	((unsigned char *)dst)[2] = (val >> 8);
+	((unsigned char *)dst)[3] = val;
+}
 
 void ror(uint* S, size_t n) {
 	uint tmp[36];
@@ -769,6 +705,48 @@ void ror(uint* S, size_t n) {
 	for (int i = 0; i < 36; i++) {
 		S[i] = tmp[i];
 	}
+}
+
+void ror3(uint* S) {
+	uint T[3] = {S[34], S[35], S[36]};
+
+	S[36] = S[33];
+	S[35] = S[32];
+	S[34] = S[31];
+	S[33] = S[30];
+	S[32] = S[29];
+	S[31] = S[28];
+	S[30] = S[27];
+	S[29] = S[26];
+	S[28] = S[25];
+	S[27] = S[24];
+	S[26] = S[23];
+	S[25] = S[22];
+	S[24] = S[21];
+	S[23] = S[20];
+	S[22] = S[19];
+	S[21] = S[18];
+	S[20] = S[17];
+	S[19] = S[16];
+	S[18] = S[15];
+	S[17] = S[14];
+	S[16] = S[13];
+	S[15] = S[12];
+	S[14] = S[11];
+	S[13] = S[10];
+	S[12] = S[9];
+	S[11] = S[8];
+	S[10] = S[7];
+	S[9] = S[6];
+	S[8] = S[5];
+	S[7] = S[4];
+	S[6] = S[3];
+	S[5] = S[2];
+	S[4] = S[1];
+	S[3] = S[0];
+	S[2] = T[3];
+	S[1] = T[2];
+	S[0] = T[1];
 }
 
 void
