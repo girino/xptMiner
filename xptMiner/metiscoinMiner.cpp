@@ -87,12 +87,14 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		kernel_keccak_noinit->addGlobalArg(hashes);
 		kernel_keccak_noinit->addScalarUInt(n * STEP_SIZE);
 
+#endif
 		sph_keccak512_context	 ctx_keccak;
 		sph_keccak512_init(&ctx_keccak);
 		sph_keccak512(&ctx_keccak, &block->version, 80);
 
 		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
 		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
+#ifndef SINGLE_KERNEL
 		q->enqueueKernel1D(kernel_keccak_noinit, STEP_SIZE,
 				kernel_keccak_noinit->getWorkGroupSize(device));
 
