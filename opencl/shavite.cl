@@ -78,7 +78,7 @@ shavite_init(shavite_context *sc)
  * MixColumns for the column where that byte goes after ShiftRows.
  */
 
-__constant uint AES0[256] = {
+__constant uint AES0_c[256] = {
 	AESx(0xA56363C6), AESx(0x847C7CF8), AESx(0x997777EE), AESx(0x8D7B7BF6),
 	AESx(0x0DF2F2FF), AESx(0xBD6B6BD6), AESx(0xB16F6FDE), AESx(0x54C5C591),
 	AESx(0x50303060), AESx(0x03010102), AESx(0xA96767CE), AESx(0x7D2B2B56),
@@ -145,7 +145,7 @@ __constant uint AES0[256] = {
 	AESx(0xCBB0B07B), AESx(0xFC5454A8), AESx(0xD6BBBB6D), AESx(0x3A16162C)
 };
 
-__constant uint AES1[256] = {
+__constant uint AES1_c[256] = {
 	AESx(0x6363C6A5), AESx(0x7C7CF884), AESx(0x7777EE99), AESx(0x7B7BF68D),
 	AESx(0xF2F2FF0D), AESx(0x6B6BD6BD), AESx(0x6F6FDEB1), AESx(0xC5C59154),
 	AESx(0x30306050), AESx(0x01010203), AESx(0x6767CEA9), AESx(0x2B2B567D),
@@ -212,7 +212,7 @@ __constant uint AES1[256] = {
 	AESx(0xB0B07BCB), AESx(0x5454A8FC), AESx(0xBBBB6DD6), AESx(0x16162C3A)
 };
 
-__constant uint AES2[256] = {
+__constant uint AES2_c[256] = {
 	AESx(0x63C6A563), AESx(0x7CF8847C), AESx(0x77EE9977), AESx(0x7BF68D7B),
 	AESx(0xF2FF0DF2), AESx(0x6BD6BD6B), AESx(0x6FDEB16F), AESx(0xC59154C5),
 	AESx(0x30605030), AESx(0x01020301), AESx(0x67CEA967), AESx(0x2B567D2B),
@@ -279,7 +279,7 @@ __constant uint AES2[256] = {
 	AESx(0xB07BCBB0), AESx(0x54A8FC54), AESx(0xBB6DD6BB), AESx(0x162C3A16)
 };
 
-__constant uint AES3[256] = {
+__constant uint AES3_c[256] = {
 	AESx(0xC6A56363), AESx(0xF8847C7C), AESx(0xEE997777), AESx(0xF68D7B7B),
 	AESx(0xFF0DF2F2), AESx(0xD6BD6B6B), AESx(0xDEB16F6F), AESx(0x9154C5C5),
 	AESx(0x60503030), AESx(0x02030101), AESx(0xCEA96767), AESx(0x567D2B2B),
@@ -357,7 +357,11 @@ __constant uint AES3[256] = {
  * This function assumes that "msg" is aligned for 32-bit access.
  */
 inline void
-c512(shavite_context *sc, const void *msg)
+c512(shavite_context *sc, const void *msg,
+		__local uint* AES0,
+		__local uint* AES1,
+		__local uint* AES2,
+		__local uint* AES3)
 {
 	uint p0, p1, p2, p3, p4, p5, p6, p7;
 	uint p8, p9, pA, pB, pC, pD, pE, pF;
@@ -947,7 +951,11 @@ shavite_core_64(shavite_context *sc, const void *data)
 #define enc32le(dst, val) (*((uint*)(dst)) = (val))
 
 void
-shavite_close(shavite_context *sc, void *dst)
+shavite_close(shavite_context *sc, void *dst,
+		__local uint* AES0,
+		__local uint* AES1,
+		__local uint* AES2,
+		__local uint* AES3)
 {
 	unsigned char *buf;
 
@@ -957,21 +965,9 @@ shavite_close(shavite_context *sc, void *dst)
 	buf[111] = 2;
 	buf[126] = 512;
 	buf[127] = 2;
-	c512(sc, buf);
+	c512(sc, buf, AES0, AES1, AES2, AES3);
 	#pragma unroll
 	for (int u = 0; u < 16; u ++)
 		enc32le((unsigned char *)dst + (u << 2), sc->h[u]);
 }
 
-
-kernel void shavite512(global ulong * in, global ulong * out) {
-	shavite_context ctx;
-	ulong data[8];
-	ulong hash[8];
-
-	shavite_init(&ctx);
-	for (int i = 0; i < 8; i++) data[i] = in[i];
-	shavite_core_64(&ctx, data);
-	shavite_close(&ctx, hash);
-	for (int i = 0; i < 8; i++) out[i] = hash[i];
-}

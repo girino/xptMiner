@@ -16,9 +16,6 @@ private:
 	OpenCLKernel* kernel_keccak_noinit;
 	OpenCLKernel* kernel_shavite;
 	OpenCLKernel* kernel_metis;
-	#ifdef VALIDATE_ALGORITHMS
-	OpenCLKernel* kernel_validate;
-	#endif
 	OpenCLBuffer* u;
 	OpenCLBuffer* buff;
 	OpenCLBuffer* hashes;

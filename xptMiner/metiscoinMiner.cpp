@@ -37,10 +37,6 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 	kernel_shavite = program->getKernel("shavite_step");
 	kernel_metis = program->getKernel("metis_step");
 #endif
-#ifdef VALIDATE_ALGORITHMS
-	kernel_validate = program->getKernel("metis512");
-#endif
-
 	main.listDevices();
 
 	u = device->getContext()->createBuffer(25*sizeof(cl_ulong), CL_MEM_READ_WRITE, NULL);

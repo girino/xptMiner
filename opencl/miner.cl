@@ -11,6 +11,34 @@ kernel void metiscoin_process(global char* in, global uint* out, global uint* ou
 	size_t id = get_global_id(0);
 	uint nonce = (uint)id + begin_nonce;
 
+	// locals
+	__local uint AES0[256];
+	__local uint AES1[256];
+	__local uint AES2[256];
+	__local uint AES3[256];
+
+	size_t lid = get_local_id(0);
+	size_t lsz = get_local_size(0);
+	if (lsz > 256) {
+		if (lid < 256) {
+			AES0[lid] = AES0_c[lid];
+			AES1[lid] = AES1_c[lid];
+			AES2[lid] = AES2_c[lid];
+			AES3[lid] = AES3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			AES0[idx] = AES0_c[idx];
+			AES1[idx] = AES1_c[idx];
+			AES2[idx] = AES2_c[idx];
+			AES3[idx] = AES3_c[idx];
+		}
+	}
+	// waits the copies
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	keccak_context	 ctx_keccak;
 	shavite_context ctx_shavite;
 	metis_context ctx_metis;
@@ -36,7 +64,7 @@ kernel void metiscoin_process(global char* in, global uint* out, global uint* ou
 	// shavite
 	shavite_init(&ctx_shavite);
 	shavite_core_64(&ctx_shavite, hash0);
-	shavite_close(&ctx_shavite, hash1);
+	shavite_close(&ctx_shavite, hash1, AES0, AES1, AES2, AES3);
 
 	// metis
 	metis_init(&ctx_metis);
@@ -58,6 +86,34 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 	uint hnonce = nonce / 0x8000;
 	uint lnonce = nonce % 0x8000;
 	nonce = hnonce * 0x10000 + lnonce;
+
+	// locals
+	__local uint AES0[256];
+	__local uint AES1[256];
+	__local uint AES2[256];
+	__local uint AES3[256];
+
+	size_t lid = get_local_id(0);
+	size_t lsz = get_local_size(0);
+	if (lsz > 256) {
+		if (lid < 256) {
+			AES0[lid] = AES0_c[lid];
+			AES1[lid] = AES1_c[lid];
+			AES2[lid] = AES2_c[lid];
+			AES3[lid] = AES3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			AES0[idx] = AES0_c[idx];
+			AES1[idx] = AES1_c[idx];
+			AES2[idx] = AES2_c[idx];
+			AES3[idx] = AES3_c[idx];
+		}
+	}
+	// waits the copies
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	ulong hash0[8];
 	ulong hash1[8];
@@ -83,7 +139,7 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 	// shavite
 	shavite_init(&ctx_shavite);
 	shavite_core_64(&ctx_shavite, hash0);
-	shavite_close(&ctx_shavite, hash1);
+	shavite_close(&ctx_shavite, hash1, AES0, AES1, AES2, AES3);
 
 	metis_context ctx_metis;
 	// metis
@@ -164,6 +220,35 @@ kernel void shavite_step(global ulong* in_out) {
 
 	size_t id = get_global_id(0);
 
+	// locals
+	__local uint AES0[256];
+	__local uint AES1[256];
+	__local uint AES2[256];
+	__local uint AES3[256];
+
+	size_t lid = get_local_id(0);
+	size_t lsz = get_local_size(0);
+	if (lsz > 256) {
+		if (lid < 256) {
+			AES0[lid] = AES0_c[lid];
+			AES1[lid] = AES1_c[lid];
+			AES2[lid] = AES2_c[lid];
+			AES3[lid] = AES3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			AES0[idx] = AES0_c[idx];
+			AES1[idx] = AES1_c[idx];
+			AES2[idx] = AES2_c[idx];
+			AES3[idx] = AES3_c[idx];
+		}
+	}
+	// waits the copies
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	shavite_context	 ctx_shavite;
 	ulong hash0[8];
 	ulong hash1[8];
@@ -175,7 +260,7 @@ kernel void shavite_step(global ulong* in_out) {
 
 	shavite_init(&ctx_shavite);
 	shavite_core_64(&ctx_shavite, hash0);
-	shavite_close(&ctx_shavite, hash1);
+	shavite_close(&ctx_shavite, hash1, AES0, AES1, AES2, AES3);
 
 	for (int i = 0; i < 8; i++) {
 		in_out[(id * 8)+i] = hash1[i];
@@ -205,9 +290,9 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 	metis_close(&ctx_metis, hash1);
 
 	// for debug
-//	for (int i = 0; i < 8; i++) {
-//		in[(id * 8)+i] = hash1[i];
-//	}
+	for (int i = 0; i < 8; i++) {
+		in[(id * 8)+i] = hash1[i];
+	}
 
 	if( *(uint*)((uchar*)hash1+28) <= target )
 	{
