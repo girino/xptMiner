@@ -6,101 +6,6 @@
 #   include "OpenCLKernel.hpp"
 #endif
 
-kernel void metiscoin_process(global char* in, global uint* out, global uint* outcount, uint begin_nonce, uint target) {
-
-	size_t id = get_global_id(0);
-	uint nonce = (uint)id + begin_nonce;
-
-	// locals
-	__local uint AES0[256];
-	__local uint AES1[256];
-	__local uint AES2[256];
-	__local uint AES3[256];
-	__local uint mixtab0[256];
-	__local uint mixtab1[256];
-	__local uint mixtab2[256];
-	__local uint mixtab3[256];
-
-	size_t lid = get_local_id(0);
-	size_t lsz = get_local_size(0);
-	if (lsz > 256) {
-		if (lid < 256) {
-			AES0[lid] = AES0_c[lid];
-			AES1[lid] = AES1_c[lid];
-			AES2[lid] = AES2_c[lid];
-			AES3[lid] = AES3_c[lid];
-		}
-	} else {
-		uint num_steps = 256/lsz;
-		for (int i = 0; i < num_steps; i++) {
-			size_t idx = lid+lsz*i;
-			AES0[idx] = AES0_c[idx];
-			AES1[idx] = AES1_c[idx];
-			AES2[idx] = AES2_c[idx];
-			AES3[idx] = AES3_c[idx];
-		}
-	}
-
-	if (lsz > 256) {
-		if (lid < 256) {
-			mixtab0[lid] = mixtab0_c[lid];
-			mixtab1[lid] = mixtab1_c[lid];
-			mixtab2[lid] = mixtab2_c[lid];
-			mixtab3[lid] = mixtab3_c[lid];
-		}
-	} else {
-		uint num_steps = 256/lsz;
-		for (int i = 0; i < num_steps; i++) {
-			size_t idx = lid+lsz*i;
-			mixtab0[idx] = mixtab0_c[idx];
-			mixtab1[idx] = mixtab1_c[idx];
-			mixtab2[idx] = mixtab2_c[idx];
-			mixtab3[idx] = mixtab3_c[idx];
-		}
-	}
-	// waits the copies
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	keccak_context	 ctx_keccak;
-	shavite_context ctx_shavite;
-	metis_context ctx_metis;
-	char data[80];
-	ulong hash0[8];
-	ulong hash1[8];
-	ulong hash2[8];
-
-	// prepares data
-	for (int i = 0; i < 80; i++) {
-		data[i] = in[i];
-	}
-	char * p = (char*)&nonce;
-	for (int i = 0; i < 4; i++) {
-		data[76+i] = p[i];
-	}
-
-	// keccak
-	keccak_init(&ctx_keccak);
-	keccak_core_80(&ctx_keccak, data);
-	keccak_close(&ctx_keccak, hash0);
-
-	// shavite
-	shavite_init(&ctx_shavite);
-	shavite_core_64(&ctx_shavite, hash0);
-	shavite_close(&ctx_shavite, hash1, AES0, AES1, AES2, AES3);
-
-	// metis
-	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash1, mixtab0, mixtab1, mixtab2, mixtab3);
-	metis_close(&ctx_metis, hash2, mixtab0, mixtab1, mixtab2, mixtab3);
-
-	if( *(uint*)((uchar*)hash2+28) <= target )
-	{
-		uint pos = atomic_inc(out) + 1; //saves first pos for counter
-		out[pos] = nonce;
-	}
-
-}
-
 kernel void metiscoin_process_noinit(constant const ulong* u, constant const char* buff, global uint* out, global uint* outcount, uint begin_nonce, uint target) {
 
 	size_t id = get_global_id(0);
@@ -114,10 +19,6 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 	__local uint AES1[256];
 	__local uint AES2[256];
 	__local uint AES3[256];
-	__local uint mixtab0[256];
-	__local uint mixtab1[256];
-	__local uint mixtab2[256];
-	__local uint mixtab3[256];
 
 	size_t lid = get_local_id(0);
 	size_t lsz = get_local_size(0);
@@ -136,24 +37,6 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 			AES1[idx] = AES1_c[idx];
 			AES2[idx] = AES2_c[idx];
 			AES3[idx] = AES3_c[idx];
-		}
-	}
-
-	if (lsz > 256) {
-		if (lid < 256) {
-			mixtab0[lid] = mixtab0_c[lid];
-			mixtab1[lid] = mixtab1_c[lid];
-			mixtab2[lid] = mixtab2_c[lid];
-			mixtab3[lid] = mixtab3_c[lid];
-		}
-	} else {
-		uint num_steps = 256/lsz;
-		for (int i = 0; i < num_steps; i++) {
-			size_t idx = lid+lsz*i;
-			mixtab0[idx] = mixtab0_c[idx];
-			mixtab1[idx] = mixtab1_c[idx];
-			mixtab2[idx] = mixtab2_c[idx];
-			mixtab3[idx] = mixtab3_c[idx];
 		}
 	}
 	// waits the copies
@@ -185,11 +68,31 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 	shavite_core_64(&ctx_shavite, hash0);
 	shavite_close(&ctx_shavite, hash1, AES0, AES1, AES2, AES3);
 
+
+	if (lsz > 256) {
+		if (lid < 256) {
+			AES0[lid] = mixtab0_c[lid];
+			AES1[lid] = mixtab1_c[lid];
+			AES2[lid] = mixtab2_c[lid];
+			AES3[lid] = mixtab3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			AES0[idx] = mixtab0_c[idx];
+			AES1[idx] = mixtab1_c[idx];
+			AES2[idx] = mixtab2_c[idx];
+			AES3[idx] = mixtab3_c[idx];
+		}
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	metis_context ctx_metis;
 	// metis
 	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash1, mixtab0, mixtab1, mixtab2, mixtab3);
-	metis_close(&ctx_metis, hash2, mixtab0, mixtab1, mixtab2, mixtab3);
+	metis_core_64(&ctx_metis, hash1, AES0, AES1, AES2, AES3);
+	metis_close(&ctx_metis, hash2, AES0, AES1, AES2, AES3);
 
 	if( *(uint*)((uchar*)hash2+28) <= target )
 	{
@@ -209,10 +112,12 @@ kernel void keccak_step(constant const char* in, global ulong* out, uint begin_n
 	ulong hash[8];
 
 	// prepares data
+#pragma unroll
 	for (int i = 0; i < 80; i++) {
 		data[i] = in[i];
 	}
 	char * p = (char*)&nonce;
+#pragma unroll
 	for (int i = 0; i < 4; i++) {
 		data[76+i] = p[i];
 	}
@@ -222,6 +127,7 @@ kernel void keccak_step(constant const char* in, global ulong* out, uint begin_n
 	keccak_core_80(&ctx_keccak, data);
 	keccak_close(&ctx_keccak, hash);
 
+#pragma unroll
 	for (int i = 0; i < 8; i++) {
 		out[(id * 8)+i] = hash[i];
 	}
@@ -298,6 +204,7 @@ kernel void shavite_step(global ulong* in_out) {
 	ulong hash1[8];
 
 	// prepares data
+#pragma unroll
 	for (int i = 0; i < 8; i++) {
 		hash0[i] = in_out[(id * 8)+i];
 	}
@@ -306,6 +213,7 @@ kernel void shavite_step(global ulong* in_out) {
 	shavite_core_64(&ctx_shavite, hash0);
 	shavite_close(&ctx_shavite, hash1, AES0, AES1, AES2, AES3);
 
+#pragma unroll
 	for (int i = 0; i < 8; i++) {
 		in_out[(id * 8)+i] = hash1[i];
 	}
@@ -354,6 +262,7 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 	ulong hash1[8];
 
 	// prepares data
+#pragma unroll
 	for (int i = 0; i < 8; i++) {
 		hash0[i] = in[(id * 8)+i];
 	}
@@ -370,7 +279,7 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 
 	if( *(uint*)((uchar*)hash1+28) <= target )
 	{
-		uint pos = atomic_inc(outcount); //saves first pos for counter
+		uint pos = atomic_inc(outcount);
 		out[pos] = nonce;
 	}
 
