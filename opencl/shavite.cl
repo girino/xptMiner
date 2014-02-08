@@ -16,7 +16,7 @@ __constant const uint16 IV512shavite = {
 	C32(0xE275EADE), C32(0x502D9FCD), C32(0xB9357178), C32(0x022A4B9A)
 };
 
-static void
+inline void
 shavite_init(shavite_context *sc)
 {
 //#pragma unroll

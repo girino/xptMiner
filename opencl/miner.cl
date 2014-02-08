@@ -31,6 +31,7 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 		}
 	} else {
 		uint num_steps = 256/lsz;
+#pragma unroll
 		for (int i = 0; i < num_steps; i++) {
 			size_t idx = lid+lsz*i;
 			AES0[idx] = AES0_c[idx];
@@ -78,6 +79,7 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 		}
 	} else {
 		uint num_steps = 256/lsz;
+#pragma unroll
 		for (int i = 0; i < num_steps; i++) {
 			size_t idx = lid+lsz*i;
 			AES0[idx] = mixtab0_c[idx];
@@ -187,6 +189,7 @@ kernel void shavite_step(global ulong* in_out) {
 		}
 	} else {
 		uint num_steps = 256/lsz;
+#pragma unroll
 		for (int i = 0; i < num_steps; i++) {
 			size_t idx = lid+lsz*i;
 			AES0[idx] = AES0_c[idx];
@@ -246,6 +249,7 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 		}
 	} else {
 		uint num_steps = 256/lsz;
+#pragma unroll
 		for (int i = 0; i < num_steps; i++) {
 			size_t idx = lid+lsz*i;
 			mixtab0[idx] = mixtab0_c[idx];
