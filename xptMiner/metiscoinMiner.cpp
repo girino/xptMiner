@@ -3,8 +3,8 @@
 #include "ticker.h"
 #include "metiscoinMiner.h"
 
-#define STEP_SIZE 0x800000
-#define NUM_STEPS 0x10
+#define STEP_SIZE 0x80000
+#define NUM_STEPS 0x100
 #define STEP_MULTIPLIER 0x10000
 
 MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
