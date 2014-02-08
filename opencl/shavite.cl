@@ -9,7 +9,7 @@ typedef struct {
 
 #define C32(x)    ((uint)(x))
 
-__constant const uint IV512shavite[] = {
+__constant const uint16 IV512shavite = {
 	C32(0x72FCCDD8), C32(0x79CA4727), C32(0x128A077B), C32(0x40D55AEC),
 	C32(0xD1901A06), C32(0x430AE307), C32(0xB29F5CD1), C32(0xDF07FBFC),
 	C32(0x8E45D73D), C32(0x681AB538), C32(0xBDE86578), C32(0xDD577E47),
@@ -19,8 +19,9 @@ __constant const uint IV512shavite[] = {
 static void
 shavite_init(shavite_context *sc)
 {
-#pragma unroll
-	for (int i = 0; i < 16; i++) sc->h[i] = IV512shavite[i];
+//#pragma unroll
+//	for (int i = 0; i < 16; i++) sc->h[i] = IV512shavite[i];
+	*((uint16*)(sc->h)) = IV512shavite;
 }
 
 #define SPH_T32(x)    ((x) & SPH_C32(0xFFFFFFFF))
