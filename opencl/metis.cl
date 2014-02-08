@@ -11,7 +11,7 @@ __constant const uint IV512metis[] = {
 	(0xe13e3567)
 };
 
-__constant const uint mixtab0[] = {
+__constant const uint mixtab0_c[] = {
 	(0x63633297), (0x7c7c6feb), (0x77775ec7),
 	(0x7b7b7af7), (0xf2f2e8e5), (0x6b6b0ab7),
 	(0x6f6f16a7), (0xc5c56d39), (0x303090c0),
@@ -100,7 +100,7 @@ __constant const uint mixtab0[] = {
 	(0x16166258)
 };
 
-__constant const uint mixtab1[] = {
+__constant const uint mixtab1_c[] = {
 	(0x97636332), (0xeb7c7c6f), (0xc777775e),
 	(0xf77b7b7a), (0xe5f2f2e8), (0xb76b6b0a),
 	(0xa76f6f16), (0x39c5c56d), (0xc0303090),
@@ -189,7 +189,7 @@ __constant const uint mixtab1[] = {
 	(0x58161662)
 };
 
-__constant const uint mixtab2[] = {
+__constant const uint mixtab2_c[] = {
 	(0x32976363), (0x6feb7c7c), (0x5ec77777),
 	(0x7af77b7b), (0xe8e5f2f2), (0x0ab76b6b),
 	(0x16a76f6f), (0x6d39c5c5), (0x90c03030),
@@ -278,7 +278,7 @@ __constant const uint mixtab2[] = {
 	(0x62581616)
 };
 
-__constant const uint mixtab3[] = {
+__constant const uint mixtab3_c[] = {
 	(0x63329763), (0x7c6feb7c), (0x775ec777),
 	(0x7b7af77b), (0xf2e8e5f2), (0x6b0ab76b),
 	(0x6f16a76f), (0xc56d39c5), (0x3090c030),
@@ -487,7 +487,11 @@ void metis_init(metis_context* sc) {
 							| ((uint)(((const unsigned char *)src)[2]) << 8) \
 							| (uint)(((const unsigned char *)src)[3]))
 
-void metis_core_64(metis_context *sc, const void *vdata)
+void metis_core_64(metis_context *sc, const void *vdata,
+		__local uint* mixtab0,
+		__local uint* mixtab1,
+		__local uint* mixtab2,
+		__local uint* mixtab3)
 {
 	const unsigned char * cdata = (const unsigned char *)vdata;
 	uint* S = sc->S;
@@ -750,7 +754,11 @@ void ror3(uint* S) {
 }
 
 void
-metis_close(metis_context *sc, void *dst)
+metis_close(metis_context *sc, void *dst,
+		__local uint* mixtab0,
+		__local uint* mixtab1,
+		__local uint* mixtab2,
+		__local uint* mixtab3)
 {
 	int i;
 	unsigned char *out;
@@ -810,40 +818,5 @@ metis_close(metis_context *sc, void *dst)
 	enc32be(out + 52, S[28]);
 	enc32be(out + 56, S[29]);
 	enc32be(out + 60, S[30]);
-}
-
-
-kernel void metis_init_g(global metis_context* ctx_g) {
-	metis_context ctx;
-	metis_init(&ctx);
-
-	(*ctx_g) = ctx;
-
-}
-
-kernel void metis_update_g(global metis_context* ctx_g, global char* data_g) {
-	metis_context ctx;
-	metis_init(&ctx);
-
-	char data[64];
-	for (int i = 0; i < 64; i++) {
-		data[i] = data_g[i];
-	}
-
-	metis_core_64(&ctx, data);
-
-	(*ctx_g) = ctx;
-}
-
-kernel void metis512(global ulong * in, global ulong * out) {
-
-	ulong data[8];
-	ulong hash[8];
-	metis_context ctx;
-	metis_init(&ctx);
-	for (int i = 0; i < 8; i++) data[i] = in[i];
-	metis_core_64(&ctx, data);
-	metis_close(&ctx, hash);
-	for (int i = 0; i < 8; i++) out[i] = hash[i];
 }
 

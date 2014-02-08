@@ -16,6 +16,10 @@ kernel void metiscoin_process(global char* in, global uint* out, global uint* ou
 	__local uint AES1[256];
 	__local uint AES2[256];
 	__local uint AES3[256];
+	__local uint mixtab0[256];
+	__local uint mixtab1[256];
+	__local uint mixtab2[256];
+	__local uint mixtab3[256];
 
 	size_t lid = get_local_id(0);
 	size_t lsz = get_local_size(0);
@@ -34,6 +38,24 @@ kernel void metiscoin_process(global char* in, global uint* out, global uint* ou
 			AES1[idx] = AES1_c[idx];
 			AES2[idx] = AES2_c[idx];
 			AES3[idx] = AES3_c[idx];
+		}
+	}
+
+	if (lsz > 256) {
+		if (lid < 256) {
+			mixtab0[lid] = mixtab0_c[lid];
+			mixtab1[lid] = mixtab1_c[lid];
+			mixtab2[lid] = mixtab2_c[lid];
+			mixtab3[lid] = mixtab3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			mixtab0[idx] = mixtab0_c[idx];
+			mixtab1[idx] = mixtab1_c[idx];
+			mixtab2[idx] = mixtab2_c[idx];
+			mixtab3[idx] = mixtab3_c[idx];
 		}
 	}
 	// waits the copies
@@ -68,8 +90,8 @@ kernel void metiscoin_process(global char* in, global uint* out, global uint* ou
 
 	// metis
 	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash1);
-	metis_close(&ctx_metis, hash2);
+	metis_core_64(&ctx_metis, hash1, mixtab0, mixtab1, mixtab2, mixtab3);
+	metis_close(&ctx_metis, hash2, mixtab0, mixtab1, mixtab2, mixtab3);
 
 	if( *(uint*)((uchar*)hash2+28) <= target )
 	{
@@ -92,6 +114,10 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 	__local uint AES1[256];
 	__local uint AES2[256];
 	__local uint AES3[256];
+	__local uint mixtab0[256];
+	__local uint mixtab1[256];
+	__local uint mixtab2[256];
+	__local uint mixtab3[256];
 
 	size_t lid = get_local_id(0);
 	size_t lsz = get_local_size(0);
@@ -110,6 +136,24 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 			AES1[idx] = AES1_c[idx];
 			AES2[idx] = AES2_c[idx];
 			AES3[idx] = AES3_c[idx];
+		}
+	}
+
+	if (lsz > 256) {
+		if (lid < 256) {
+			mixtab0[lid] = mixtab0_c[lid];
+			mixtab1[lid] = mixtab1_c[lid];
+			mixtab2[lid] = mixtab2_c[lid];
+			mixtab3[lid] = mixtab3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			mixtab0[idx] = mixtab0_c[idx];
+			mixtab1[idx] = mixtab1_c[idx];
+			mixtab2[idx] = mixtab2_c[idx];
+			mixtab3[idx] = mixtab3_c[idx];
 		}
 	}
 	// waits the copies
@@ -144,8 +188,8 @@ kernel void metiscoin_process_noinit(constant const ulong* u, constant const cha
 	metis_context ctx_metis;
 	// metis
 	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash1);
-	metis_close(&ctx_metis, hash2);
+	metis_core_64(&ctx_metis, hash1, mixtab0, mixtab1, mixtab2, mixtab3);
+	metis_close(&ctx_metis, hash2, mixtab0, mixtab1, mixtab2, mixtab3);
 
 	if( *(uint*)((uchar*)hash2+28) <= target )
 	{
@@ -275,6 +319,36 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 	uint lnonce = nonce % 0x8000;
 	nonce = hnonce * 0x10000 + lnonce;
 
+
+	// locals
+	__local uint mixtab0[256];
+	__local uint mixtab1[256];
+	__local uint mixtab2[256];
+	__local uint mixtab3[256];
+
+
+	size_t lid = get_local_id(0);
+	size_t lsz = get_local_size(0);
+	if (lsz > 256) {
+		if (lid < 256) {
+			mixtab0[lid] = mixtab0_c[lid];
+			mixtab1[lid] = mixtab1_c[lid];
+			mixtab2[lid] = mixtab2_c[lid];
+			mixtab3[lid] = mixtab3_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			mixtab0[idx] = mixtab0_c[idx];
+			mixtab1[idx] = mixtab1_c[idx];
+			mixtab2[idx] = mixtab2_c[idx];
+			mixtab3[idx] = mixtab3_c[idx];
+		}
+	}
+	// waits the copies
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	metis_context ctx_metis;
 	ulong hash0[8];
 	ulong hash1[8];
@@ -286,8 +360,8 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 
 	// metis
 	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash0);
-	metis_close(&ctx_metis, hash1);
+	metis_core_64(&ctx_metis, hash0, mixtab0, mixtab1, mixtab2, mixtab3);
+	metis_close(&ctx_metis, hash1, mixtab0, mixtab1, mixtab2, mixtab3);
 
 	// for debug
 	for (int i = 0; i < 8; i++) {
