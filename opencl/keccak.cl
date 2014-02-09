@@ -72,6 +72,7 @@ dec64le_aligned(const uchar2 *src)
 
 void
 enc64le_aligned(uchar2 *dst, ulong2 val) {
+#pragma unroll
 	for (uint i = 0; i < 8; i++) {
 		ulong2 tmp = val >> (8*i);
 		dst[i] = ((uchar)tmp.s0, (uchar)tmp.s1);
