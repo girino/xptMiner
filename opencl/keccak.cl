@@ -5,11 +5,11 @@
 #define SPH_C64(x)    ((ulong)(x))
 
 typedef struct {
-	unsigned char buf[144];    /* first field, for alignment */
+	uchar2 buf[144];    /* first field, for alignment */
 	size_t ptr, lim;
 	union {
-		ulong wide[25];
-		uint narrow[50];
+		ulong2 wide[25];
+		uint2 narrow[50];
 	} u;
 } keccak_context;
 
@@ -54,51 +54,33 @@ constant ulong RC[] = {
 #define a34   (kc->u.wide[23])
 #define a44   (kc->u.wide[24])
 
-ulong
-dec64le_aligned(const void *src)
+ulong2
+dec64le_aligned(const uchar2 *src)
 {
-	return (ulong)(((const unsigned char *)src)[0])
-		| ((ulong)(((const unsigned char *)src)[1]) << 8)
-		| ((ulong)(((const unsigned char *)src)[2]) << 16)
-		| ((ulong)(((const unsigned char *)src)[3]) << 24)
-		| ((ulong)(((const unsigned char *)src)[4]) << 32)
-		| ((ulong)(((const unsigned char *)src)[5]) << 40)
-		| ((ulong)(((const unsigned char *)src)[6]) << 48)
-		| ((ulong)(((const unsigned char *)src)[7]) << 56);
+	ulong2 ret = 0;
+	for (uint i = 0; i <8; i++) {
+		ret |= (ulong2)(((ulong)(src[i].s0)) << ((ulong)(8*i)), ((ulong)(src[i].s1)) << ((ulong)(8*i)));;
+	}
+	return ret;
 }
 
 // this does not work on AMD for some reason, reverting
 //#define dec64le_aligned(x) (*((ulong*)(x)))
 
-//void
-//enc64le_aligned(void *dst, ulong val) {
-//	((unsigned char *)dst)[0] = val;
-//	((unsigned char *)dst)[1] = (val >> 8);
-//	((unsigned char *)dst)[2] = (val >> 16);
-//	((unsigned char *)dst)[3] = (val >> 24);
-//	((unsigned char *)dst)[4] = (val >> 32);
-//	((unsigned char *)dst)[5] = (val >> 40);
-//	((unsigned char *)dst)[6] = (val >> 48);
-//	((unsigned char *)dst)[7] = (val >> 56);
-//}
-
-#define enc64le_aligned(dst, val) (*((ulong*)(dst)) = (val))
-
-#define INPUT_BUF(size)   { \
-		size_t j; \
-		for (j = 0; j < (size); j += 8) { \
-			kc->u.wide[j >> 3] ^= dec64le_aligned(buf + j); \
-		} \
+void
+enc64le_aligned(uchar2 *dst, ulong2 val) {
+	for (uint i = 0; i < 8; i++) {
+		ulong2 tmp = val >> (8*i);
+		dst[i] = ((uchar)tmp.s0, (uchar)tmp.s1);
 	}
+}
+
+//#define enc64le_aligned(dst, val) (*((ulong*)(dst)) = (val))
 
 #define SPH_T64(x)    ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
 #define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
 #define SPH_ROTR64(x, n)   SPH_ROTL64(x, (64 - (n)))
-#define INPUT_BUF144   INPUT_BUF(144)
-#define INPUT_BUF136   INPUT_BUF(136)
-#define INPUT_BUF104   INPUT_BUF(104)
-#define INPUT_BUF72    INPUT_BUF(72)
-#define DECL64(x)        ulong x
+#define DECL64(x)        ulong2 x
 #define MOV64(d, s)      (d = s)
 #define XOR64(d, a, b)   (d = a ^ b)
 #define AND64(d, a, b)   (d = a & b)
@@ -328,63 +310,9 @@ dec64le_aligned(const void *src)
 		MOV64(a13, t); \
 	}
 
-#define KECCAK_F_1600_   { \
-		int j; \
-		for (j = 0; j < 24; j ++) { \
-			KF_ELT01(RC[j + 0]); \
-			P1_TO_P0; \
-		} \
-	}
-
-void
-keccak_init(keccak_context *kc)
+void keccak_core_end_64_8(keccak_context *kc)
 {
-	int i;
-
-#pragma unroll
-	for (i = 0; i < 25; i ++)
-		kc->u.wide[i] = 0;
-	/*
-	 * Initialization for the "lane complement".
-	 */
-	kc->u.wide[ 1] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-	kc->u.wide[ 2] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-	kc->u.wide[ 8] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-	kc->u.wide[12] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-	kc->u.wide[17] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-	kc->u.wide[20] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-	kc->ptr = 0;
-	kc->lim = 200 - (512 >> 2);
-}
-
-void keccak_core_80(keccak_context *kc, const void *data)
-{
-	unsigned char *buf;
-
-	buf = kc->buf;
-
-// two passes
-	size_t clen = 72;
-#pragma unroll
-	for (int i = 0; i < 72; i++) buf[i] = ((const unsigned char *)data)[i];
-	data = (const unsigned char *)data + 72;
-#pragma unroll
-	for (size_t j = 0; j < 9; j ++) {
-		kc->u.wide[j] ^= dec64le_aligned(buf + (j<<3));
-	}
-#pragma unroll
-	for (int j = 0; j < 24; j ++) {
-		KF_ELT01(RC[j + 0]);
-		P1_TO_P0;
-	}
-
-	*((uchar8*)buf) = *((uchar8*)data);
-	kc->ptr = 8;
-}
-
-void keccak_core_end_64_8(keccak_context *kc, const void *data)
-{
-	unsigned char *buf;
+	uchar2 *buf;
 
 	buf = kc->buf;
 
@@ -395,7 +323,7 @@ void keccak_core_end_64_8(keccak_context *kc, const void *data)
 
 #pragma unroll
 	for (size_t j = 0; j < (72); j += 8) {
-		kc->u.wide[j >> 3] ^= (*((ulong*)(buf + j)));
+		kc->u.wide[j >> 3] ^= dec64le_aligned(buf + j);
 	}
 #pragma unroll
 	for (int j = 0; j < 24; j ++) {
@@ -405,15 +333,11 @@ void keccak_core_end_64_8(keccak_context *kc, const void *data)
 }
 
 // d = 64, lim = 72, ub = 0. n = 0
-	static void keccak_close(keccak_context *kc, void *dst)
+	static void keccak_close(keccak_context *kc, ulong2 *dst)
 	{
-		union {
-			unsigned char tmp[72 + 1];
-			ulong dummy;   /* for alignment */
-		} u;
 		size_t j;
 
-		keccak_core_end_64_8(kc, u.tmp);
+		keccak_core_end_64_8(kc);
 		/* Finalize the "lane complement" */
 		kc->u.wide[ 1] = ~kc->u.wide[ 1];
 		kc->u.wide[ 2] = ~kc->u.wide[ 2];
@@ -422,43 +346,7 @@ void keccak_core_end_64_8(keccak_context *kc, const void *data)
 		kc->u.wide[17] = ~kc->u.wide[17];
 		kc->u.wide[20] = ~kc->u.wide[20];
 		for (j = 0; j < 64; j += 8)
-			enc64le_aligned(((uchar*)dst) + j, kc->u.wide[j >> 3]);
+			//enc64le_aligned(((uchar2*)dst) + j, kc->u.wide[j >> 3]);
+			dst[j >> 3] = kc->u.wide[j >> 3];
 	}
 
-kernel void keccak_init_g(global keccak_context* out) {
-	keccak_context	 ctx_keccak;
-	keccak_init(&ctx_keccak);
-
-	(*out) = ctx_keccak;
-}
-
-kernel void keccak_update_g(global char* in, global keccak_context* out) {
-	keccak_context	 ctx_keccak;
-	char data[80];
-
-	for (int i = 0; i < 80; i++) {
-		data[i] = in[i];
-	}
-	keccak_init(&ctx_keccak);
-	keccak_core_80(&ctx_keccak, data);
-
-	(*out) = ctx_keccak;
-}
-
-kernel void keccak(global char* in, global ulong* out) {
-
-	keccak_context	 ctx_keccak;
-	char data[80];
-	ulong hash[8];
-	for (int i = 0; i < 80; i++) {
-		data[i] = in[i];
-	}
-
-	keccak_init(&ctx_keccak);
-	keccak_core_80(&ctx_keccak, data);
-	keccak_close(&ctx_keccak, hash);
-
-	for (int i = 0; i < 8; i++) {
-		out[i] = hash[i];
-	}
-}
