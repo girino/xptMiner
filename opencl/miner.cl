@@ -138,16 +138,15 @@
 //	}
 //}
 
-kernel void keccak_step_noinit(constant const ulong* u, constant const uchar* buff, global ulong* out, uint begin_nonce) {
+kernel void keccak_step_noinit(constant const ulong* u, constant const char* buff, global ulong* out, uint begin_nonce) {
 
 	size_t id = get_global_id(0);
-	uint nonce = ((uint)id*2) + begin_nonce;
+	uint nonce = (uint)id + begin_nonce;
 	uint hnonce = nonce / 0x8000;
 	uint lnonce = nonce % 0x8000;
 	nonce = hnonce * 0x10000 + lnonce;
-	uint nonce_p_1 = nonce+1;
 
-	ulong2 hash[8];
+	ulong hash[8];
 
 	// inits context
 	keccak_context	 ctx_keccak;
@@ -157,13 +156,7 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const uchar* bu
 	for (int i = 0; i < 4; i++) {
 		ctx_keccak.buf[i] = buff[i];
 	}
-	uchar * p0 = (uchar*)(&nonce);
-	uchar * p1 = (uchar*)(&nonce_p_1);
-#pragma unroll
-	for (int i = 0; i < 4; i++) {
-		ctx_keccak.buf[i+4].s0 = p0[i];
-		ctx_keccak.buf[i+4].s1 = p1[i];
-	}
+	*((uint*)(ctx_keccak.buf+4)) = nonce;
 #pragma unroll
 	for (int i = 0; i < 25; i++) {
 		ctx_keccak.u.wide[i] = u[i];
@@ -174,10 +167,7 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const uchar* bu
 
 #pragma unroll
 	for (int i = 0; i < 8; i++) {
-		out[(id * 2 * 8)+i] = hash[i].s0;
-		out[(id * 2 * 8)+i+8] = hash[i].s1;
-//		out[(id * 2 * 8)+i] = ctx_keccak.buf[i].s0;
-//		out[(id * 2 * 8)+i+8] = ctx_keccak.buf[i].s1;
+		out[(id * 8)+i] = hash[i];
 	}
 }
 

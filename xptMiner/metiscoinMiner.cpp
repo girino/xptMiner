@@ -76,7 +76,7 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 
 		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
 		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
-		q->enqueueKernel1D(kernel_keccak_noinit, STEP_SIZE/2,
+		q->enqueueKernel1D(kernel_keccak_noinit, STEP_SIZE,
 				kernel_keccak_noinit->getWorkGroupSize(device));
 
 #ifdef MEASURE_TIME
