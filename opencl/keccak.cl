@@ -57,11 +57,14 @@ constant ulong RC[] = {
 ulong2
 dec64le_aligned(const uchar2 *src)
 {
-	ulong2 ret = 0;
-	for (uint i = 0; i <8; i++) {
-		ret |= (ulong2)(((ulong)(src[i].s0)) << ((ulong)(8*i)), ((ulong)(src[i].s1)) << ((ulong)(8*i)));;
-	}
-	return ret;
+	return (ulong2)( ((ulong)(src[0].s0)), ((ulong)(src[0].s1)) )
+	| (ulong2)( ((ulong)(src[1].s0)) <<  8, ((ulong)(src[1].s1)) << 8 )
+	| (ulong2)( ((ulong)(src[2].s0)) << 16, ((ulong)(src[2].s1)) << 16 )
+	| (ulong2)( ((ulong)(src[3].s0)) << 24, ((ulong)(src[3].s1)) << 24 )
+	| (ulong2)( ((ulong)(src[4].s0)) << 32, ((ulong)(src[4].s1)) << 32 )
+	| (ulong2)( ((ulong)(src[5].s0)) << 40, ((ulong)(src[5].s1)) << 40 )
+	| (ulong2)( ((ulong)(src[6].s0)) << 48, ((ulong)(src[6].s1)) << 48 )
+	| (ulong2)( ((ulong)(src[7].s0)) << 56, ((ulong)(src[7].s1)) << 56 );
 }
 
 // this does not work on AMD for some reason, reverting
