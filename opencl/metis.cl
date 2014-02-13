@@ -102,7 +102,7 @@ __constant const uint mixtab0_c[] = {
 
 #define MT_ROR(x, n)   (((x) >> (n)) | ((x) << (32 - (n))))
 
-uint mixtab(uint n, uint x, __local uint* mixtab) {
+uint mixtab(uint n, uint x, __private uint* mixtab) {
 	return MT_ROR(mixtab[x], 8*n);
 }
 
@@ -227,7 +227,7 @@ void metis_init(metis_context* sc) {
 							| ((uint)(((const unsigned char *)src)[2]) << 8) \
 							| (uint)(((const unsigned char *)src)[3]))
 
-void metis_core_64(metis_context *sc, const void *vdata, __local uint* mixtab0)
+void metis_core_64(metis_context *sc, const void *vdata, __private uint* mixtab0)
 {
 	const unsigned char * cdata = (const unsigned char *)vdata;
 	uint* S = sc->S;
@@ -490,7 +490,7 @@ void ror3(uint* S) {
 }
 
 void
-metis_close(metis_context *sc, void *dst, __local uint* mixtab0)
+metis_close(metis_context *sc, void *dst, __private uint* mixtab0)
 {
 	int i;
 	unsigned char *out;

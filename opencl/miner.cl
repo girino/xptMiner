@@ -235,7 +235,7 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 
 
 	// locals
-	__local uint mixtab0[256];
+	__private uint mixtab0[256];
 
 
 	size_t lid = get_local_id(0);
