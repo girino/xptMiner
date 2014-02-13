@@ -234,6 +234,27 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 	nonce = hnonce * 0x10000 + lnonce;
 
 
+	// locals
+	__local uint mixtab0[256];
+
+
+	size_t lid = get_local_id(0);
+	size_t lsz = get_local_size(0);
+	if (lsz > 256) {
+		if (lid < 256) {
+			mixtab0[lid] = mixtab0_c[lid];
+		}
+	} else {
+		uint num_steps = 256/lsz;
+#pragma unroll
+		for (int i = 0; i < num_steps; i++) {
+			size_t idx = lid+lsz*i;
+			mixtab0[idx] = mixtab0_c[idx];
+		}
+	}
+	// waits the copies
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	metis_context ctx_metis;
 	ulong hash0[8];
 	ulong hash1[8];
@@ -246,8 +267,8 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 
 	// metis
 	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash0);
-	metis_close(&ctx_metis, hash1);
+	metis_core_64(&ctx_metis, hash0, mixtab0);
+	metis_close(&ctx_metis, hash1, mixtab0);
 
 	// for debug
 	for (int i = 0; i < 8; i++) {

@@ -102,8 +102,8 @@ __constant const uint mixtab0_c[] = {
 
 #define MT_ROR(x, n)   (((x) >> (n)) | ((x) << (32 - (n))))
 
-uint mixtab(uint n, uint x) {
-	return MT_ROR(mixtab0_c[x], 8*n);
+uint mixtab(uint n, uint x, __local uint* mixtab) {
+	return MT_ROR(mixtab[x], 8*n);
 }
 
 
@@ -159,49 +159,49 @@ void metis_init(metis_context* sc) {
 		uint r2 = 0; \
 		uint r3 = 0; \
 		uint tmp; \
-		tmp = mixtab(0, x0 >> 24); \
+		tmp = mixtab(0, x0 >> 24, mixtab0); \
 		c0 ^= tmp; \
-		tmp = mixtab(1, (x0 >> 16) & 0xFF); \
+		tmp = mixtab(1, (x0 >> 16) & 0xFF, mixtab0); \
 		c0 ^= tmp; \
 		r1 ^= tmp; \
-		tmp = mixtab(2, (x0 >>  8) & 0xFF); \
+		tmp = mixtab(2, (x0 >>  8) & 0xFF, mixtab0); \
 		c0 ^= tmp; \
 		r2 ^= tmp; \
-		tmp = mixtab(3, x0 & 0xFF); \
+		tmp = mixtab(3, x0 & 0xFF, mixtab0); \
 		c0 ^= tmp; \
 		r3 ^= tmp; \
-		tmp = mixtab(0, x1 >> 24); \
+		tmp = mixtab(0, x1 >> 24, mixtab0); \
 		c1 ^= tmp; \
 		r0 ^= tmp; \
-		tmp = mixtab(1, (x1 >> 16) & 0xFF); \
+		tmp = mixtab(1, (x1 >> 16) & 0xFF, mixtab0); \
 		c1 ^= tmp; \
-		tmp = mixtab(2, (x1 >>  8) & 0xFF); \
+		tmp = mixtab(2, (x1 >>  8) & 0xFF, mixtab0); \
 		c1 ^= tmp; \
 		r2 ^= tmp; \
-		tmp = mixtab(3, x1 & 0xFF); \
+		tmp = mixtab(3, x1 & 0xFF, mixtab0); \
 		c1 ^= tmp; \
 		r3 ^= tmp; \
-		tmp = mixtab(0, x2 >> 24); \
+		tmp = mixtab(0, x2 >> 24, mixtab0); \
 		c2 ^= tmp; \
 		r0 ^= tmp; \
-		tmp = mixtab(1, (x2 >> 16) & 0xFF); \
+		tmp = mixtab(1, (x2 >> 16) & 0xFF, mixtab0); \
 		c2 ^= tmp; \
 		r1 ^= tmp; \
-		tmp = mixtab(2, (x2 >>  8) & 0xFF); \
+		tmp = mixtab(2, (x2 >>  8) & 0xFF, mixtab0); \
 		c2 ^= tmp; \
-		tmp = mixtab(3, x2 & 0xFF); \
+		tmp = mixtab(3, x2 & 0xFF, mixtab0); \
 		c2 ^= tmp; \
 		r3 ^= tmp; \
-		tmp = mixtab(0, x3 >> 24); \
+		tmp = mixtab(0, x3 >> 24, mixtab0); \
 		c3 ^= tmp; \
 		r0 ^= tmp; \
-		tmp = mixtab(1, (x3 >> 16) & 0xFF); \
+		tmp = mixtab(1, (x3 >> 16) & 0xFF, mixtab0); \
 		c3 ^= tmp; \
 		r1 ^= tmp; \
-		tmp = mixtab(2, (x3 >>  8) & 0xFF); \
+		tmp = mixtab(2, (x3 >>  8) & 0xFF, mixtab0); \
 		c3 ^= tmp; \
 		r2 ^= tmp; \
-		tmp = mixtab(3, x3 & 0xFF); \
+		tmp = mixtab(3, x3 & 0xFF, mixtab0); \
 		c3 ^= tmp; \
 		x0 = ((c0 ^ r0) & (0xFF000000)) \
 			| ((c1 ^ r1) & (0x00FF0000)) \
@@ -227,7 +227,7 @@ void metis_init(metis_context* sc) {
 							| ((uint)(((const unsigned char *)src)[2]) << 8) \
 							| (uint)(((const unsigned char *)src)[3]))
 
-void metis_core_64(metis_context *sc, const void *vdata)
+void metis_core_64(metis_context *sc, const void *vdata, __local uint* mixtab0)
 {
 	const unsigned char * cdata = (const unsigned char *)vdata;
 	uint* S = sc->S;
@@ -490,7 +490,7 @@ void ror3(uint* S) {
 }
 
 void
-metis_close(metis_context *sc, void *dst)
+metis_close(metis_context *sc, void *dst, __local uint* mixtab0)
 {
 	int i;
 	unsigned char *out;
