@@ -150,8 +150,8 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const char* buf
 
 	// inits context
 	keccak_context	 ctx_keccak;
-	ctx_keccak.lim = 72;
-	ctx_keccak.ptr = 8;
+//	ctx_keccak.lim = 72;
+//	ctx_keccak.ptr = 8;
 #pragma unroll
 	for (int i = 0; i < 4; i++) {
 		ctx_keccak.buf[i] = buff[i];
@@ -159,7 +159,7 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const char* buf
 	*((uint*)(ctx_keccak.buf+4)) = nonce;
 #pragma unroll
 	for (int i = 0; i < 25; i++) {
-		ctx_keccak.u.wide[i] = u[i];
+		ctx_keccak.wide[i] = u[i];
 	}
 
 	// keccak
@@ -275,9 +275,12 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 	}
 
 	// metis
-	metis_init(&ctx_metis);
-	metis_core_64(&ctx_metis, hash0, mixtab0, mixtab1, mixtab2, mixtab3);
-	metis_close(&ctx_metis, hash1, mixtab0, mixtab1, mixtab2, mixtab3);
+    metis_init(&ctx_metis);
+    metis_core_and_close(&ctx_metis, hash0, hash1,
+    		mixtab0,
+    		mixtab1,
+    		mixtab2,
+    		mixtab3);
 
 	// for debug
 	for (int i = 0; i < 8; i++) {
