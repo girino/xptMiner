@@ -4,9 +4,8 @@
 #   include "shavite.cl"
 #   include "metis.cl"
 #   include "OpenCLKernel.hpp"
+#   include "opencl/common.cl"
 #endif
-
-#include "opencl/common.cl"
 
 //kernel void metiscoin_process_noinit(constant const ulong* u, constant const char* buff, global uint* out, global uint* outcount, uint begin_nonce, uint target) {
 //
