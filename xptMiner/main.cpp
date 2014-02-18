@@ -155,7 +155,7 @@ void xptMiner_submitShare(minerPrimecoinBlock_t* block)
  */
 void xptMiner_submitShare(minerMetiscoinBlock_t* block)
 {
-	printf("Share found! (Blockheight: %d)\n", block->height);
+    printf("Share found! (Nonce: %#010x; Blockheight: %d)\n", block->nonce, block->height);
 	EnterCriticalSection(&cs_xptClient);
 
 	if( xptClient == NULL || xptClient_isDisconnected(xptClient, NULL) == true )
