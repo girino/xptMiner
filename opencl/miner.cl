@@ -142,9 +142,9 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const char* buf
 
 	size_t id = get_global_id(0);
 	uint nonce = (uint)id + begin_nonce;
-	uint hnonce = nonce / 0x8000;
-	uint lnonce = nonce % 0x8000;
-	nonce = hnonce * 0x10000 + lnonce;
+	//uint hnonce = nonce / 0x8000;
+	//uint lnonce = nonce % 0x8000;
+	//nonce = hnonce * 0x10000 + lnonce;
 
 	ulong hash[8];
 
@@ -229,9 +229,9 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
 
 	size_t id = get_global_id(0);
 	uint nonce = (uint)id + begin_nonce;
-	uint hnonce = nonce / 0x8000;
-	uint lnonce = nonce % 0x8000;
-	nonce = hnonce * 0x10000 + lnonce;
+	//uint hnonce = nonce / 0x8000;
+	//uint lnonce = nonce % 0x8000;
+	//nonce = hnonce * 0x10000 + lnonce;
 
 
 	// locals
