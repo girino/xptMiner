@@ -285,9 +285,9 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
     		mixtab3);
 
 	// for debug
-	for (int i = 0; i < 8; i++) {
-		in[(id * 8)+i] = hash1[i];
-	}
+//	for (int i = 0; i < 8; i++) {
+//		in[(id * 8)+i] = hash1[i];
+//	}
 
 	if( *(uint*)((uchar*)hash1+28) <= target )
 	{
