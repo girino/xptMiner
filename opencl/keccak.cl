@@ -1,47 +1,71 @@
-#include "opencl/common.cl"
+
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+#ifdef _ECLIPSE_OPENCL_HEADER
+#   include "OpenCLKernel.hpp"
+#endif
+
+#define SPH_C64(x)    ((ulong)(x))
 
 typedef struct {
     unsigned char buf[144];    /* first field, for alignment */
-    ulong wide[25];
+    size_t ptr, lim;
+    union __attribute__ ((aligned)) {
+        ulong wide[25];
+        uint narrow[50];
+    } u;
 } __attribute__ ((aligned)) keccak_context;
 
-// #define SPH_KECCAK_NOCOPY
+constant ulong RC[] __attribute__ ((aligned)) = {
+    SPH_C64(0x0000000000000001), SPH_C64(0x0000000000008082),
+    SPH_C64(0x800000000000808A), SPH_C64(0x8000000080008000),
+    SPH_C64(0x000000000000808B), SPH_C64(0x0000000080000001),
+    SPH_C64(0x8000000080008081), SPH_C64(0x8000000000008009),
+    SPH_C64(0x000000000000008A), SPH_C64(0x0000000000000088),
+    SPH_C64(0x0000000080008009), SPH_C64(0x000000008000000A),
+    SPH_C64(0x000000008000808B), SPH_C64(0x800000000000008B),
+    SPH_C64(0x8000000000008089), SPH_C64(0x8000000000008003),
+    SPH_C64(0x8000000000008002), SPH_C64(0x8000000000000080),
+    SPH_C64(0x000000000000800A), SPH_C64(0x800000008000000A),
+    SPH_C64(0x8000000080008081), SPH_C64(0x8000000000008080),
+    SPH_C64(0x0000000080000001), SPH_C64(0x8000000080008008)
+};
+
+//#define SPH_KECCAK_NOCOPY
 #ifdef SPH_KECCAK_NOCOPY
 
-#define a00   (kc->wide[ 0])
-#define a10   (kc->wide[ 1])
-#define a20   (kc->wide[ 2])
-#define a30   (kc->wide[ 3])
-#define a40   (kc->wide[ 4])
-#define a01   (kc->wide[ 5])
-#define a11   (kc->wide[ 6])
-#define a21   (kc->wide[ 7])
-#define a31   (kc->wide[ 8])
-#define a41   (kc->wide[ 9])
-#define a02   (kc->wide[10])
-#define a12   (kc->wide[11])
-#define a22   (kc->wide[12])
-#define a32   (kc->wide[13])
-#define a42   (kc->wide[14])
-#define a03   (kc->wide[15])
-#define a13   (kc->wide[16])
-#define a23   (kc->wide[17])
-#define a33   (kc->wide[18])
-#define a43   (kc->wide[19])
-#define a04   (kc->wide[20])
-#define a14   (kc->wide[21])
-#define a24   (kc->wide[22])
-#define a34   (kc->wide[23])
-#define a44   (kc->wide[24])
+#define a00   (kc->u.wide[ 0])
+#define a10   (kc->u.wide[ 1])
+#define a20   (kc->u.wide[ 2])
+#define a30   (kc->u.wide[ 3])
+#define a40   (kc->u.wide[ 4])
+#define a01   (kc->u.wide[ 5])
+#define a11   (kc->u.wide[ 6])
+#define a21   (kc->u.wide[ 7])
+#define a31   (kc->u.wide[ 8])
+#define a41   (kc->u.wide[ 9])
+#define a02   (kc->u.wide[10])
+#define a12   (kc->u.wide[11])
+#define a22   (kc->u.wide[12])
+#define a32   (kc->u.wide[13])
+#define a42   (kc->u.wide[14])
+#define a03   (kc->u.wide[15])
+#define a13   (kc->u.wide[16])
+#define a23   (kc->u.wide[17])
+#define a33   (kc->u.wide[18])
+#define a43   (kc->u.wide[19])
+#define a04   (kc->u.wide[20])
+#define a14   (kc->u.wide[21])
+#define a24   (kc->u.wide[22])
+#define a34   (kc->u.wide[23])
+#define a44   (kc->u.wide[24])
 
 #define DECL_STATE
 #define READ_STATE(sc)
 #define WRITE_STATE(sc)
 
 #define INPUT_BUF72   do { \
-        #pragma unroll \
         for (size_t j = 0; j < 72; j += 8) { \
-            kc->wide[j >> 3] ^= (*((ulong*)(buf + j))); \
+            kc->u.wide[j >> 3] ^= (*((ulong*)(buf + j))); \
         } \
     } while (0)
 
@@ -55,59 +79,59 @@ typedef struct {
     ulong a40, a41, a42, a43, a44;
 
 #define READ_STATE(state)   do { \
-        a00 = (state)->wide[ 0]; \
-        a10 = (state)->wide[ 1]; \
-        a20 = (state)->wide[ 2]; \
-        a30 = (state)->wide[ 3]; \
-        a40 = (state)->wide[ 4]; \
-        a01 = (state)->wide[ 5]; \
-        a11 = (state)->wide[ 6]; \
-        a21 = (state)->wide[ 7]; \
-        a31 = (state)->wide[ 8]; \
-        a41 = (state)->wide[ 9]; \
-        a02 = (state)->wide[10]; \
-        a12 = (state)->wide[11]; \
-        a22 = (state)->wide[12]; \
-        a32 = (state)->wide[13]; \
-        a42 = (state)->wide[14]; \
-        a03 = (state)->wide[15]; \
-        a13 = (state)->wide[16]; \
-        a23 = (state)->wide[17]; \
-        a33 = (state)->wide[18]; \
-        a43 = (state)->wide[19]; \
-        a04 = (state)->wide[20]; \
-        a14 = (state)->wide[21]; \
-        a24 = (state)->wide[22]; \
-        a34 = (state)->wide[23]; \
-        a44 = (state)->wide[24]; \
+        a00 = (state)->u.wide[ 0]; \
+        a10 = (state)->u.wide[ 1]; \
+        a20 = (state)->u.wide[ 2]; \
+        a30 = (state)->u.wide[ 3]; \
+        a40 = (state)->u.wide[ 4]; \
+        a01 = (state)->u.wide[ 5]; \
+        a11 = (state)->u.wide[ 6]; \
+        a21 = (state)->u.wide[ 7]; \
+        a31 = (state)->u.wide[ 8]; \
+        a41 = (state)->u.wide[ 9]; \
+        a02 = (state)->u.wide[10]; \
+        a12 = (state)->u.wide[11]; \
+        a22 = (state)->u.wide[12]; \
+        a32 = (state)->u.wide[13]; \
+        a42 = (state)->u.wide[14]; \
+        a03 = (state)->u.wide[15]; \
+        a13 = (state)->u.wide[16]; \
+        a23 = (state)->u.wide[17]; \
+        a33 = (state)->u.wide[18]; \
+        a43 = (state)->u.wide[19]; \
+        a04 = (state)->u.wide[20]; \
+        a14 = (state)->u.wide[21]; \
+        a24 = (state)->u.wide[22]; \
+        a34 = (state)->u.wide[23]; \
+        a44 = (state)->u.wide[24]; \
     } while (0)
 
 #define WRITE_STATE(state)   do { \
-        (state)->wide[ 0] = a00; \
-        (state)->wide[ 1] = a10; \
-        (state)->wide[ 2] = a20; \
-        (state)->wide[ 3] = a30; \
-        (state)->wide[ 4] = a40; \
-        (state)->wide[ 5] = a01; \
-        (state)->wide[ 6] = a11; \
-        (state)->wide[ 7] = a21; \
-        (state)->wide[ 8] = a31; \
-        (state)->wide[ 9] = a41; \
-        (state)->wide[10] = a02; \
-        (state)->wide[11] = a12; \
-        (state)->wide[12] = a22; \
-        (state)->wide[13] = a32; \
-        (state)->wide[14] = a42; \
-        (state)->wide[15] = a03; \
-        (state)->wide[16] = a13; \
-        (state)->wide[17] = a23; \
-        (state)->wide[18] = a33; \
-        (state)->wide[19] = a43; \
-        (state)->wide[20] = a04; \
-        (state)->wide[21] = a14; \
-        (state)->wide[22] = a24; \
-        (state)->wide[23] = a34; \
-        (state)->wide[24] = a44; \
+        (state)->u.wide[ 0] = a00; \
+        (state)->u.wide[ 1] = a10; \
+        (state)->u.wide[ 2] = a20; \
+        (state)->u.wide[ 3] = a30; \
+        (state)->u.wide[ 4] = a40; \
+        (state)->u.wide[ 5] = a01; \
+        (state)->u.wide[ 6] = a11; \
+        (state)->u.wide[ 7] = a21; \
+        (state)->u.wide[ 8] = a31; \
+        (state)->u.wide[ 9] = a41; \
+        (state)->u.wide[10] = a02; \
+        (state)->u.wide[11] = a12; \
+        (state)->u.wide[12] = a22; \
+        (state)->u.wide[13] = a32; \
+        (state)->u.wide[14] = a42; \
+        (state)->u.wide[15] = a03; \
+        (state)->u.wide[16] = a13; \
+        (state)->u.wide[17] = a23; \
+        (state)->u.wide[18] = a33; \
+        (state)->u.wide[19] = a43; \
+        (state)->u.wide[20] = a04; \
+        (state)->u.wide[21] = a14; \
+        (state)->u.wide[22] = a24; \
+        (state)->u.wide[23] = a34; \
+        (state)->u.wide[24] = a44; \
     } while (0)
 
 #define INPUT_BUF72   do { \
@@ -124,7 +148,26 @@ typedef struct {
 #endif
 
 
+ulong
+dec64le_aligned(const void *src)
+{
+    return (ulong)(((const unsigned char *)src)[0])
+        | ((ulong)(((const unsigned char *)src)[1]) << 8)
+        | ((ulong)(((const unsigned char *)src)[2]) << 16)
+        | ((ulong)(((const unsigned char *)src)[3]) << 24)
+        | ((ulong)(((const unsigned char *)src)[4]) << 32)
+        | ((ulong)(((const unsigned char *)src)[5]) << 40)
+        | ((ulong)(((const unsigned char *)src)[6]) << 48)
+        | ((ulong)(((const unsigned char *)src)[7]) << 56);
+}
 
+
+#define enc64le_aligned(dst, val) (*((ulong*)(dst)) = (val))
+
+#define SPH_T64(x)          ((x) & SPH_C64(0xFFFFFFFFFFFFFFFF))
+//#define SPH_ROTL64(x, n)   SPH_T64(((x) << (n)) | ((x) >> (64 - (n))))
+#define SPH_ROTL64(x, n)    rotate((ulong)(x), (ulong)(n))
+#define SPH_ROTR64(x, n)    SPH_ROTL64(x, (64 - (n)))
 #define DECL64(x)           ulong x
 #define MOV64(d, s)         (d = s)
 #define XOR64(d, a, b)      (d = a ^ b)
@@ -342,16 +385,18 @@ keccak_init(keccak_context *kc)
     int i;
 
     #pragma unroll
-    for (i = 0; i < 25; i ++) { kc->wide[i] = 0; }
+    for (i = 0; i < 25; i ++) { kc->u.wide[i] = 0; }
     /*
      * Initialization for the "lane complement".
      */
-    kc->wide[ 1] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-    kc->wide[ 2] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-    kc->wide[ 8] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-    kc->wide[12] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-    kc->wide[17] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
-    kc->wide[20] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->u.wide[ 1] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->u.wide[ 2] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->u.wide[ 8] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->u.wide[12] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->u.wide[17] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->u.wide[20] = SPH_C64(0xFFFFFFFFFFFFFFFFL);
+    kc->ptr = 0;
+    kc->lim = 200 - (512 >> 2);
 }
 
 
@@ -380,6 +425,9 @@ void keccak_core_end_64_8(keccak_context *kc, const void *data)
 
     // KHI
     DECL64(c0); DECL64(c1); DECL64(c2); DECL64(c3); DECL64(c4); DECL64(bnn);
+
+    // P1_TO_P0
+    DECL64(t);
 
     /*
     #pragma unroll
@@ -551,13 +599,13 @@ void keccak_close(keccak_context *kc, void *dst)
 
     keccak_core_end_64_8(kc, u.tmp);
     /* Finalize the "lane complement" */
-    kc->wide[ 1] = ~kc->wide[ 1];
-    kc->wide[ 2] = ~kc->wide[ 2];
-    kc->wide[ 8] = ~kc->wide[ 8];
-    kc->wide[12] = ~kc->wide[12];
-    kc->wide[17] = ~kc->wide[17];
-    kc->wide[20] = ~kc->wide[20];
+    kc->u.wide[ 1] = ~kc->u.wide[ 1];
+    kc->u.wide[ 2] = ~kc->u.wide[ 2];
+    kc->u.wide[ 8] = ~kc->u.wide[ 8];
+    kc->u.wide[12] = ~kc->u.wide[12];
+    kc->u.wide[17] = ~kc->u.wide[17];
+    kc->u.wide[20] = ~kc->u.wide[20];
     for (j = 0; j < 64; j += 8)
-        enc64le_aligned(((uchar*)dst) + j, kc->wide[j >> 3]);
+        enc64le_aligned(((uchar*)dst) + j, kc->u.wide[j >> 3]);
 }
 

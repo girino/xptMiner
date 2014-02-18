@@ -6,6 +6,8 @@
 #   include "OpenCLKernel.hpp"
 #endif
 
+#include "opencl/common.cl"
+
 //kernel void metiscoin_process_noinit(constant const ulong* u, constant const char* buff, global uint* out, global uint* outcount, uint begin_nonce, uint target) {
 //
 //	size_t id = get_global_id(0);
@@ -159,7 +161,7 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const char* buf
 	*((uint*)(ctx_keccak.buf+4)) = nonce;
 #pragma unroll
 	for (int i = 0; i < 25; i++) {
-		ctx_keccak.wide[i] = u[i];
+		ctx_keccak.u.wide[i] = u[i];
 	}
 
 	// keccak

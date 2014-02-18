@@ -38,7 +38,7 @@
 #define SPH_ROTL64(x, n)    rotate((ulong)(x), (ulong)(n))
 #define SPH_ROTR64(x, n)    SPH_ROTL64(x, (64 - (n)))
 
-void
+/*void
 enc64be(void *dst, ulong val)
 {
     ((unsigned char *)dst)[0] = (val >> 56);
@@ -60,7 +60,6 @@ enc32be(void *dst, uint val)
     ((unsigned char *)dst)[2] = (val >> 8);
     ((unsigned char *)dst)[3] = val;
 }
-
 ulong
 dec64le_aligned(const void *src)
 {
@@ -73,6 +72,7 @@ dec64le_aligned(const void *src)
         | ((ulong)(((const unsigned char *)src)[6]) << 48)
         | ((ulong)(((const unsigned char *)src)[7]) << 56);
 }
+*/
 
 #define AESx(x) ((uint)(x))
 
