@@ -306,9 +306,10 @@ void xptMiner_xptQueryWorkLoop()
 	xptClient = xptMiner_initateNewXptConnectionObject();
 	if(minerSettings.requestTarget.donationPercent > 0.1f)
 	{
-		//todo: Set developer fee addr
-		//xptClient_addDeveloperFeeEntry(xptClient, "MK6n2VZZBpQrqpP9rtzsC9PRi5t1qsWuGc", getFeeFromDouble(minerSettings.requestTarget.donationPercent / 2.0));
-		xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent));
+        // Girino
+        xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 2.0 / 3.0));
+        // GigaWatt
+        xptClient_addDeveloperFeeEntry(xptClient, "MEu8jBkkVvTLwvpiPjWC9YntyDH2u5KwVy", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 1.0 / 3.0));
 	}
 	uint32 timerPrintDetails = getTimeMilliseconds() + 8000;
 	while( true )
@@ -442,7 +443,7 @@ void xptMiner_printHelp()
 void xptMiner_parseCommandline(int argc, char **argv)
 {
 	sint32 cIdx = 1;
-	commandlineInput.donationPercent = 2.5f;
+	commandlineInput.donationPercent = 3.0f;
 	while( cIdx < argc )
 	{
 		char* argument = argv[cIdx];
