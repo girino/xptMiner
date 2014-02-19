@@ -33,7 +33,7 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 #ifdef VALIDATE_ALGORITHMS
 	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak, "-DVALIDATE_ALGORITHMS");
 #else
-	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak, "-cl-strict-aliasing -cl-single-precision-constant -cl-mad-enable -cl-no-signed-zeros -cl-unsafe-math-optimizations -cl-finite-math-only -cl-fast-relaxed-math");
+	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak);
 #endif
 	kernel_keccak_noinit = program->getKernel("keccak_step_noinit");
 	kernel_shavite = program->getKernel("shavite_step");
