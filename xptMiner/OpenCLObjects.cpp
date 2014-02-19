@@ -279,7 +279,7 @@ OpenCLProgram::~OpenCLProgram() {
 	clReleaseProgram(program);
 }
 
-OpenCLProgram* OpenCLContext::loadProgramFromFiles(std::vector<std::string> filenames) {
+OpenCLProgram* OpenCLContext::loadProgramFromFiles(std::vector<std::string> filenames, const char* options) {
 	std::vector<std::string> file_strs;
 	for (int i = 0; i < filenames.size(); i++) {
 		std::ifstream file (filenames[i].c_str());
@@ -287,10 +287,10 @@ OpenCLProgram* OpenCLContext::loadProgramFromFiles(std::vector<std::string> file
 		                 std::istreambuf_iterator<char>());
 		file_strs.push_back(file_str);
 	}
-	return loadProgramFromStrings(file_strs);
+	return loadProgramFromStrings(file_strs, options);
 }
 
-OpenCLProgram* OpenCLContext::loadProgramFromStrings(std::vector<std::string> file_strs) {
+OpenCLProgram* OpenCLContext::loadProgramFromStrings(std::vector<std::string> file_strs, const char* options) {
 
 	const char * str_ptr[file_strs.size()];
 	size_t size_ptr[file_strs.size()];
@@ -304,7 +304,7 @@ OpenCLProgram* OpenCLContext::loadProgramFromStrings(std::vector<std::string> fi
 	check_error(error);
 
 	// build for all devices, I can implement different devices later;
-	error = clBuildProgram(program, 0, NULL, "", NULL, NULL);
+	error = clBuildProgram(program, 0, NULL, options, NULL, NULL);
 	if (error) {
 		print_err_msg(error);
 		// uses first device for error messages

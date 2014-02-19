@@ -139,7 +139,7 @@
 //	}
 //}
 
-kernel void keccak_step_noinit(constant const ulong* u, constant const char* buff, global ulong* out, uint begin_nonce) {
+kernel void keccak_step_noinit(constant const ulong* restrict u, constant const char* restrict buff, global ulong* restrict out, uint begin_nonce) {
 
 	size_t id = get_global_id(0);
 	uint nonce = (uint)id + begin_nonce;
@@ -172,7 +172,7 @@ kernel void keccak_step_noinit(constant const ulong* u, constant const char* buf
 	}
 }
 
-kernel void shavite_step(global ulong* in_out) {
+kernel void shavite_step(global ulong* restrict in_out) {
 
 	size_t id = get_global_id(0);
 
@@ -226,7 +226,7 @@ kernel void shavite_step(global ulong* in_out) {
 	}
 }
 
-kernel void metis_step(global ulong* in, global uint* out, global uint* outcount, uint begin_nonce, uint target) {
+kernel void metis_step(global ulong* restrict in, global uint* restrict out, global uint* restrict outcount, uint begin_nonce, uint target) {
 
 	size_t id = get_global_id(0);
 	uint nonce = (uint)id + begin_nonce;
@@ -284,9 +284,11 @@ kernel void metis_step(global ulong* in, global uint* out, global uint* outcount
     		mixtab3);
 
 	// for debug
-//	for (int i = 0; i < 8; i++) {
-//		in[(id * 8)+i] = hash1[i];
-//	}
+#ifdef VALIDATE_ALGORITHMS
+	for (int i = 0; i < 8; i++) {
+		in[(id * 8)+i] = hash1[i];
+	}
+#endif
 
 	if( *(uint*)((uchar*)hash1+28) <= target )
 	{
