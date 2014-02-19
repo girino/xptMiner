@@ -50,6 +50,15 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 	q = device->getContext()->createCommandQueue(device);
 }
 
+int log2(size_t value) {
+	int ret = 0;
+	while (value > 1) {
+		ret++;
+		value = value>>1;
+	}
+	return ret;
+}
+
 void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 {
 
@@ -81,8 +90,13 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 
 		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
 		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
+		size_t wgs = kernel_keccak_noinit->getWorkGroupSize(device);
+#ifdef DEBUG_WORKGROUP_SIZE
+		printf ("wgs = %d => %d\n", wgs, 1 << log2(wgs));
+#endif
+		wgs = 1 << log2(wgs); // guarantees to be a power of 2
 		q->enqueueKernel1D(kernel_keccak_noinit, STEP_SIZE,
-				kernel_keccak_noinit->getWorkGroupSize(device));
+				wgs);
 
 #ifdef MEASURE_TIME
 		printf("keccak work group size = %d\n", kernel_keccak_noinit->getWorkGroupSize(device));
@@ -94,8 +108,12 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		kernel_shavite->resetArgs();
 		kernel_shavite->addGlobalArg(hashes);
 
-		q->enqueueKernel1D(kernel_shavite, STEP_SIZE,
-				kernel_shavite->getWorkGroupSize(device));
+		wgs = kernel_shavite->getWorkGroupSize(device);
+#ifdef DEBUG_WORKGROUP_SIZE
+		printf ("wgs = %d => %d\n", wgs, 1 << log2(wgs));
+#endif
+		wgs = 1 << log2(wgs); // guarantees to be a power of 2
+		q->enqueueKernel1D(kernel_shavite, STEP_SIZE, wgs);
 
 #ifdef MEASURE_TIME
 		printf("shavite work group size = %d\n", kernel_shavite->getWorkGroupSize(device));
@@ -113,8 +131,12 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 
 		cl_uint out_count_tmp = 0;
 		q->enqueueWriteBuffer(out_count, &out_count_tmp, sizeof(cl_uint));
-		q->enqueueKernel1D(kernel_metis, STEP_SIZE,
-				kernel_metis->getWorkGroupSize(device));
+		wgs = kernel_metis->getWorkGroupSize(device);
+#ifdef DEBUG_WORKGROUP_SIZE
+		printf ("wgs = %d => %d\n", wgs, 1 << log2(wgs));
+#endif
+		wgs = 1 << log2(wgs); // guarantees to be a power of 2
+		q->enqueueKernel1D(kernel_metis, STEP_SIZE, wgs);
 		q->enqueueReadBuffer(out, out_tmp, sizeof(cl_uint) * 255);
 		q->enqueueReadBuffer(out_count, &out_count_tmp, sizeof(cl_uint));
 		q->finish();
