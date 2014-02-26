@@ -19,6 +19,8 @@ typedef struct
 	// protoshare specific
 	uint32 nBirthdayA;
 	uint32 nBirthdayB;
+	// riecoin specific
+	uint8  riecoin_nOffset[32];
 	// gbt stuff
 	uint8 merkleRootOriginal[32];
 	uint32 userExtraNonceLength;
@@ -34,7 +36,6 @@ typedef struct
 typedef struct  
 {
 	SOCKET clientSocket;
-
 	xptPacketbuffer_t* sendBuffer; // buffer for sending data
 	xptPacketbuffer_t* recvBuffer; // buffer for receiving data
 	// worker info
@@ -68,7 +69,7 @@ typedef struct
 // connection setup
 xptClient_t* xptClient_create();
 bool xptClient_connect(xptClient_t* xptClient, generalRequestTarget_t* target);
-void xptClient_addDeveloperFeeEntry(xptClient_t* xptClient, char* walletAddress, uint16 integerFee);
+void xptClient_addDeveloperFeeEntry(xptClient_t* xptClient, char* walletAddress, uint16 integerFee, bool isMaxCoinAddress);
 void xptClient_free(xptClient_t* xptClient);
 void xptClient_forceDisconnect(xptClient_t* xptClient);
 

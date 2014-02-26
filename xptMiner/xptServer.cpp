@@ -1,8 +1,4 @@
 #include"global.h"
-#include "ticker.h"
-#include <iostream>
-
-
 
 /*
  * Creates a new x.pushthrough server instance that listens on the specified port
@@ -17,7 +13,7 @@ xptServer_t* xptServer_create(uint16 port)
 	memset(&addr,0,sizeof(SOCKADDR_IN));
 	addr.sin_family=AF_INET;
 	addr.sin_port=htons(port);
-	addr.sin_addr.s_addr=INADDR_ANY;
+	addr.sin_addr.s_addr=ADDR_ANY;
 	if( bind(s,(SOCKADDR*)&addr,sizeof(SOCKADDR_IN)) == SOCKET_ERROR )
 	{
 		closesocket(s);
@@ -44,16 +40,9 @@ xptServerClient_t* xptServer_newClient(xptServer_t* xptServer, SOCKET s)
 	xptServerClient->packetbuffer = xptPacketbuffer_create(4*1024); // 4kb
 	xptServerClient->xptServer = xptServer;
 	// set socket as non-blocking
-#ifdef _WIN32
 	unsigned int nonblocking=1;
 	unsigned int cbRet;
 	WSAIoctl(s, FIONBIO, &nonblocking, sizeof(nonblocking), NULL, 0, (LPDWORD)&cbRet, NULL, NULL);
-#else
-	int flags, err;
-	flags = fcntl(s, F_GETFL, 0); 
-	flags |= O_NONBLOCK;
-	err = fcntl(s, F_SETFL, flags); //ignore errors for now..
-#endif
 	// return client object
 	return xptServerClient;
 }
@@ -139,7 +128,7 @@ void xptServer_deleteClient(xptServer_t* xptServer, xptServerClient_t* xptServer
  */
 void xptServer_sendNewBlockToAll(xptServer_t* xptServer, uint32 coinTypeIndex)
 {
-	uint64 time1 = getTimeMilliseconds();
+	uint32 time1 = GetTickCount();
 	sint32 workerCount = 0;
 	sint32 payloadCount = 0;
 	for(uint32 i=0; i<xptServer->list_connections->objectCount; i++)
@@ -154,7 +143,7 @@ void xptServer_sendNewBlockToAll(xptServer_t* xptServer, uint32 coinTypeIndex)
 		workerCount++;
 		payloadCount += xptServerClient->payloadNum;
 	}
-	uint32 time2 = getTimeMilliseconds() - time1;
+	uint32 time2 = GetTickCount() - time1;
 	printf("Send %d blocks to %d workers in %dms\n", payloadCount, workerCount, time2);
 }
 
@@ -182,7 +171,7 @@ void xptServer_checkForNewBlocks(xptServer_t* xptServer)
  */
 void xptServer_startProcessing(xptServer_t* xptServer)
 {
-	fd_set fd;
+	FD_SET fd;
 	timeval sTimeout;
 	sTimeout.tv_sec = 0;
 	sTimeout.tv_usec = 250000;

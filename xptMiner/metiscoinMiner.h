@@ -22,7 +22,7 @@ private:
 	OpenCLBuffer* out;
 	OpenCLBuffer* out_count;
 	OpenCLCommandQueue * q;
-	uint32_t out_tmp[255];
+	cl_uint out_tmp[255];
 };
 
 #endif

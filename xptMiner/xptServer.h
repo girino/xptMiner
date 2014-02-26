@@ -28,9 +28,12 @@ typedef struct
 	// protoshares
 	uint32 nBirthdayA;
 	uint32 nBirthdayB;
-	// target
+	// target (from compact format)
 	uint8 target[32];
 	uint8 targetShare[32];
+	// target (compact format, only needed for Riecoin)
+	uint32 targetCompact;
+	uint32 targetShareCompact;
 	// coinbase & tx info
 	uint16 coinBase1Size;
 	uint8 coinBase1[1024];
@@ -44,11 +47,7 @@ typedef struct
 
 typedef struct _xptServer_t 
 {
-#ifdef _WIN32
 	SOCKET acceptSocket;
-#else
-	int acceptSocket;
-#endif
 	simpleList_t* list_connections;
 	xptPacketbuffer_t* sendBuffer; // shared buffer for sending data
 	// last known block height (for new block detection)
@@ -61,11 +60,7 @@ typedef struct _xptServer_t
 typedef struct  
 {
 	xptServer_t* xptServer;
-#ifdef _WIN32
 	SOCKET clientSocket;
-#else
-	int clientSocket;
-#endif
 	bool disconnected;
 	// recv buffer
 	xptPacketbuffer_t* packetbuffer;
@@ -121,6 +116,8 @@ typedef struct
 #define ALGORITHM_PRIME			3
 #define ALGORITHM_PROTOSHARES	4
 #define ALGORITHM_METISCOIN		5
+#define ALGORITHM_MAXCOIN		6
+#define ALGORITHM_RIECOIN		7
 
 // xpt general
 xptServer_t* xptServer_create(uint16 port);

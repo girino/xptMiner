@@ -7,6 +7,11 @@
 #include <cstring>
 #define MAX_TRANSACTIONS	(4096)
 
+volatile uint32 totalShareCount;
+volatile uint32 totalRejectedShareCount;
+volatile uint64 totalCollisionCount;
+volatile uint32 invalidShareCount;
+
 // miner version string (for pool statistic)
 char* minerVersionString = "xptMiner 1.1clintar";
 
@@ -218,8 +223,8 @@ void *xptMiner_minerThread(void *arg)
 				minerMetiscoinBlock.uniqueMerkleSeed = uniqueMerkleSeedGenerator;
 				uniqueMerkleSeedGenerator++;
 				// generate merkle root transaction
-				bitclient_generateTxHash(sizeof(uint32), (uint8*)&minerMetiscoinBlock.uniqueMerkleSeed, workDataSource.coinBase1Size, workDataSource.coinBase1, workDataSource.coinBase2Size, workDataSource.coinBase2, workDataSource.txHash);
-				bitclient_calculateMerkleRoot(workDataSource.txHash, workDataSource.txHashCount+1, minerMetiscoinBlock.merkleRoot);
+				bitclient_generateTxHash(sizeof(uint32), (uint8*)&minerMetiscoinBlock.uniqueMerkleSeed, workDataSource.coinBase1Size, workDataSource.coinBase1, workDataSource.coinBase2Size, workDataSource.coinBase2, workDataSource.txHash, TX_MODE_DOUBLE_SHA256);
+				bitclient_calculateMerkleRoot(workDataSource.txHash, workDataSource.txHashCount+1, minerMetiscoinBlock.merkleRoot, TX_MODE_DOUBLE_SHA256);
 				hasValidWork = true;
 			}
 		}
@@ -306,10 +311,12 @@ void xptMiner_xptQueryWorkLoop()
 	xptClient = xptMiner_initateNewXptConnectionObject();
 	if(minerSettings.requestTarget.donationPercent > 0.1f)
 	{
+        // coin Dev
+        xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 1.0 / 7.0), 0);
         // Girino
-        xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 2.0 / 3.0));
+        xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 4.0 / 7.0), 0);
         // GigaWatt
-        xptClient_addDeveloperFeeEntry(xptClient, "MEu8jBkkVvTLwvpiPjWC9YntyDH2u5KwVy", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 1.0 / 3.0));
+        xptClient_addDeveloperFeeEntry(xptClient, "MEu8jBkkVvTLwvpiPjWC9YntyDH2u5KwVy", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 2.0 / 7.0), 0);
 	}
 	uint32 timerPrintDetails = getTimeMilliseconds() + 8000;
 	while( true )

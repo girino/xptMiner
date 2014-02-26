@@ -1,18 +1,9 @@
 #include"global.h"
-#include"ticker.h"
-#ifndef _WIN32
-#include <errno.h>
-#include <cstring>
-#endif
 
-#include <iostream>
-#define SHA2_TYPES
-#include "sha2.h"
 /*
- + * Tries to establish a connection to the given ip:port
- + * Uses a blocking connect operation
- + */
-#ifdef _WIN32
+ * Tries to establish a connection to the given ip:port
+ * Uses a blocking connect operation
+ */
 SOCKET xptClient_openConnection(char *IP, int Port)
 {
 	SOCKET s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
@@ -26,24 +17,9 @@ SOCKET xptClient_openConnection(char *IP, int Port)
 	int result = connect(s,(SOCKADDR*)&addr,sizeof(SOCKADDR_IN));
 	if( result )
 	{
+		closesocket(s);
 		return SOCKET_ERROR;
 	}
-#else
-int xptClient_openConnection(char *IP, int Port)
-{
-  int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port=htons(Port);
-  addr.sin_addr.s_addr = inet_addr(IP);
-  int result = connect(s, (sockaddr*)&addr, sizeof(sockaddr_in));
-	if( result )
-	{
-		return SOCKET_ERROR;
-	}
-#endif
-
 	return s;
 }
 
@@ -58,10 +34,8 @@ xptClient_t* xptClient_create()
 	// initialize object
 	xptClient->disconnected = true;
 	xptClient->clientSocket = SOCKET_ERROR;
-
 	xptClient->sendBuffer = xptPacketbuffer_create(256*1024);
 	xptClient->recvBuffer = xptPacketbuffer_create(256*1024);
-
 	InitializeCriticalSection(&xptClient->cs_shareSubmit);
 	InitializeCriticalSection(&xptClient->cs_workAccess);
 	xptClient->list_shareSubmitQueue = simpleList_create(4);
@@ -80,32 +54,17 @@ bool xptClient_connect(xptClient_t* xptClient, generalRequestTarget_t* target)
 	if( xptClient->disconnected == false )
 		return false;
 	// first try to connect to the given host/port
-#ifdef _WIN32
 	SOCKET clientSocket = xptClient_openConnection(target->ip, target->port);
 	if( clientSocket == SOCKET_ERROR )
 		return false;
-#else
-  int clientSocket = xptClient_openConnection(target->ip, target->port);
-		if( clientSocket == 0 )
-					return false;
-#endif
-
-#ifdef _WIN32
 	// set socket as non-blocking
 	unsigned int nonblocking=1;
 	unsigned int cbRet;
 	WSAIoctl(clientSocket, FIONBIO, &nonblocking, sizeof(nonblocking), NULL, 0, (LPDWORD)&cbRet, NULL, NULL);
-#else
-  int flags, err;
-  flags = fcntl(clientSocket, F_GETFL, 0); 
-  flags |= O_NONBLOCK;
-  err = fcntl(clientSocket, F_SETFL, flags); //ignore errors for now..
-#endif
 	// initialize the connection details
 	xptClient->clientSocket = clientSocket;
-
-	strncpy(xptClient->username, target->authUser ,127);
-	strncpy(xptClient->password, target->authPass, 127);
+	strcpy_s(xptClient->username, 127, target->authUser);
+	strcpy_s(xptClient->password, 127, target->authPass);
 	// reset old work info
 	memset(&xptClient->blockWorkInfo, 0x00, sizeof(xptBlockWorkInfo_t));
 	// send worker login
@@ -123,12 +82,10 @@ void xptClient_forceDisconnect(xptClient_t* xptClient)
 {
 	if( xptClient->disconnected )
 		return; // already disconnected
-
 	if( xptClient->clientSocket != SOCKET_ERROR )
 	{
 		closesocket(xptClient->clientSocket);
 		xptClient->clientSocket = SOCKET_ERROR;
-    
 	}
 	xptClient->disconnected = true;
 	// mark work as unavailable
@@ -142,12 +99,10 @@ void xptClient_free(xptClient_t* xptClient)
 {
 	xptPacketbuffer_free(xptClient->sendBuffer);
 	xptPacketbuffer_free(xptClient->recvBuffer);
-	
 	if( xptClient->clientSocket != SOCKET_ERROR )
 	{
 		closesocket(xptClient->clientSocket);
 	}
-	
 	simpleList_free(xptClient->list_shareSubmitQueue);
 	free(xptClient);
 }
@@ -290,7 +245,7 @@ bool xptClient_decodeBase58(char* base58Input, sint32 inputLength, uint8* dataOu
  * You may want to consider re-implementing this mechanism in a different way if you plan to
  * have at least some basic level of protection from reverse engineers that try to remove your fee (if closed source)
  */
-void xptClient_addDeveloperFeeEntry(xptClient_t* xptClient, char* walletAddress, uint16 integerFee)
+void xptClient_addDeveloperFeeEntry(xptClient_t* xptClient, char* walletAddress, uint16 integerFee, bool isMaxCoinAddress)
 {
 	uint8 walletAddressRaw[256];
 	sint32 walletAddressRawLength = sizeof(walletAddressRaw);
@@ -307,13 +262,24 @@ void xptClient_addDeveloperFeeEntry(xptClient_t* xptClient, char* walletAddress,
 	}
 	// validate checksum
 	uint8 addressHash[32];
-	sha256_ctx s256c;
-	sha256_init(&s256c);
-	sha256_update(&s256c, walletAddressRaw, walletAddressRawLength-4);
-	sha256_final(&s256c, addressHash);
-	sha256_init(&s256c);
-	sha256_update(&s256c, addressHash, 32);
-	sha256_final(&s256c, addressHash);	
+	if( isMaxCoinAddress )
+	{
+		// MaxCoin uses Keccak for wallet address checksum
+		sph_keccak256_context keccak256_ctx;
+		sph_keccak256_init(&keccak256_ctx);
+		sph_keccak256(&keccak256_ctx, walletAddressRaw, walletAddressRawLength-4);
+		sph_keccak256_close(&keccak256_ctx, addressHash);
+	}
+	else
+	{
+		sha256_ctx s256c;
+		sha256_init(&s256c);
+		sha256_update(&s256c, walletAddressRaw, walletAddressRawLength-4);
+		sha256_final(&s256c, addressHash);
+		sha256_init(&s256c);
+		sha256_update(&s256c, addressHash, 32);
+		sha256_final(&s256c, addressHash);
+	}
 	if( *(uint32*)(walletAddressRaw+21) != *(uint32*)addressHash )
 	{
 		printf("xptClient_addDeveloperFeeEntry(): Invalid checksum\n");
@@ -376,8 +342,8 @@ void xptClient_getDifficultyTargetFromCompact(uint32 nCompact, uint32* hashTarge
  */
 void xptClient_sendWorkerLogin(xptClient_t* xptClient)
 {
-//	uint32 usernameLength = std::min(127, (uint32)strlen(xptClient->username));
-//	uint32 passwordLength = std::min(127, (uint32)strlen(xptClient->password));
+	uint32 usernameLength = mymin(127, (uint32)strlen(xptClient->username));
+	uint32 passwordLength = mymin(127, (uint32)strlen(xptClient->password));
 	// build the packet
 	bool sendError = false;
 	xptPacketbuffer_beginWritePacket(xptClient->sendBuffer, XPT_OPC_C_AUTH_REQ);
@@ -426,7 +392,7 @@ void xptClient_sendShare(xptClient_t* xptClient, xptShareToSubmit_t* xptShareToS
 		xptPacketbuffer_writeU8(xptClient->sendBuffer, &sendError, xptShareToSubmit->chainMultiplierSize);
 		xptPacketbuffer_writeData(xptClient->sendBuffer, xptShareToSubmit->chainMultiplier, xptShareToSubmit->chainMultiplierSize, &sendError);
 	}
-	else if( xptShareToSubmit->algorithm == ALGORITHM_SHA256 || xptShareToSubmit->algorithm == ALGORITHM_SCRYPT || xptShareToSubmit->algorithm == ALGORITHM_METISCOIN )
+	else if( xptShareToSubmit->algorithm == ALGORITHM_SHA256 || xptShareToSubmit->algorithm == ALGORITHM_SCRYPT || xptShareToSubmit->algorithm == ALGORITHM_METISCOIN || xptShareToSubmit->algorithm == ALGORITHM_MAXCOIN )
 	{
 		// original merkleroot (used to identify work)
 		xptPacketbuffer_writeData(xptClient->sendBuffer, xptShareToSubmit->merkleRootOriginal, 32, &sendError);
@@ -440,6 +406,16 @@ void xptClient_sendShare(xptClient_t* xptClient, xptShareToSubmit_t* xptShareToS
 		xptPacketbuffer_writeU32(xptClient->sendBuffer, &sendError, xptShareToSubmit->nBirthdayA);
 		// nBirthdayB
 		xptPacketbuffer_writeU32(xptClient->sendBuffer, &sendError, xptShareToSubmit->nBirthdayB);
+		// original merkleroot (used to identify work)
+		xptPacketbuffer_writeData(xptClient->sendBuffer, xptShareToSubmit->merkleRootOriginal, 32, &sendError);
+		// user extra nonce (up to 16 bytes)
+		xptPacketbuffer_writeU8(xptClient->sendBuffer, &sendError, xptShareToSubmit->userExtraNonceLength);
+		xptPacketbuffer_writeData(xptClient->sendBuffer, xptShareToSubmit->userExtraNonceData, xptShareToSubmit->userExtraNonceLength, &sendError);
+	}
+	else if( xptShareToSubmit->algorithm == ALGORITHM_RIECOIN )
+	{
+		// nOffset
+		xptPacketbuffer_writeData(xptClient->sendBuffer, xptShareToSubmit->riecoin_nOffset, 32, &sendError);
 		// original merkleroot (used to identify work)
 		xptPacketbuffer_writeData(xptClient->sendBuffer, xptShareToSubmit->merkleRootOriginal, 32, &sendError);
 		// user extra nonce (up to 16 bytes)
@@ -461,9 +437,9 @@ void xptClient_sendShare(xptClient_t* xptClient, xptShareToSubmit_t* xptShareToS
 void xptClient_sendPing(xptClient_t* xptClient)
 {
 	// Windows only for now
- 
-
-	uint64 timestamp = getTimeHighRes();
+	LARGE_INTEGER hpc;
+	QueryPerformanceCounter(&hpc);
+	uint64 timestamp = (uint64)hpc.QuadPart;
 	// build the packet
 	bool sendError = false;
 	xptPacketbuffer_beginWritePacket(xptClient->sendBuffer, XPT_OPC_C_PING);
@@ -503,7 +479,6 @@ bool xptClient_process(xptClient_t* xptClient)
 	if( xptClient == NULL )
 		return false;
 	// are there shares to submit?
-
 	EnterCriticalSection(&xptClient->cs_shareSubmit);
 	if( xptClient->list_shareSubmitQueue->objectCount > 0 )
 	{
@@ -533,20 +508,12 @@ bool xptClient_process(xptClient_t* xptClient)
 	sint32 r = recv(xptClient->clientSocket, (char*)(xptClient->recvBuffer->buffer+xptClient->recvIndex), bytesToReceive, 0);
 	if( r <= 0 )
 	{
-#ifdef _WIN32
 		// receive error, is it a real error or just because of non blocking sockets?
 		if( WSAGetLastError() != WSAEWOULDBLOCK )
 		{
 			xptClient->disconnected = true;
 			return false;
 		}
-#else
-    if(errno != EAGAIN)
-    {
-		xptClient->disconnected = true;
-		return false;
-    }
-#endif
 		return true;
 	}
 	xptClient->recvIndex += r;

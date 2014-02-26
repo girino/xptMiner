@@ -1,5 +1,5 @@
 #include"global.h"
-#include <signal.h>
+
 simpleList_t* simpleList_create(sint32 initialLimit)
 {
 	simpleList_t* simpleList = (simpleList_t*)malloc(sizeof(simpleList_t));
@@ -357,10 +357,10 @@ uint32 stream_copy(stream_t* dest, stream_t* source, uint32 length)
 	uint32 copyAmount = 0;
 	while( length > 0 )
 	{
-		uint32 stepCopy = std::min(length, copySize);
+		uint32 stepCopy = mymin(length, copySize);
 		uint32 bytesRead = stream_readData(source, copyBuffer, stepCopy);
 		uint32 bytesWritten = stream_writeData(dest, copyBuffer, stepCopy);
-		uint32 tBytes = std::min(bytesRead,bytesWritten);
+		uint32 tBytes = mymin(bytesRead,bytesWritten);
 		if( tBytes == 0 )
 			break; // error while copying, exit now
 		copyAmount += tBytes;
@@ -390,7 +390,7 @@ typedef struct
 uint32 streamEx_dynamicMemoryRange_readData(void *object, void *buffer, uint32 len)
 {
 	streamEx_dynamicMemoryRange_t* memoryRangeObj = (streamEx_dynamicMemoryRange_t*)object;
-	uint32 bytesToRead = std::min(len, memoryRangeObj->bufferSize - memoryRangeObj->bufferPosition);
+	uint32 bytesToRead = mymin(len, memoryRangeObj->bufferSize - memoryRangeObj->bufferPosition);
 	RtlCopyMemory(buffer, memoryRangeObj->buffer + memoryRangeObj->bufferPosition, bytesToRead);
 	memoryRangeObj->bufferPosition += bytesToRead;
 	return bytesToRead;
@@ -407,7 +407,7 @@ uint32 streamEx_dynamicMemoryRange_writeData(void *object, void *buffer, uint32 
 	uint32 overwriteSize = memoryRangeObj->bufferSize - memoryRangeObj->bufferPosition; // amount of bytes that can be written without exceeding the buffer size
 	if( overwriteSize )
 	{
-		bytesToWrite = std::min(overwriteSize, len);
+		bytesToWrite = mymin(overwriteSize, len);
 		RtlCopyMemory(memoryRangeObj->buffer + memoryRangeObj->bufferPosition, bBuffer, bytesToWrite);
 		memoryRangeObj->bufferPosition += bytesToWrite;
 		nLen -= bytesToWrite;
@@ -430,7 +430,7 @@ uint32 streamEx_dynamicMemoryRange_writeData(void *object, void *buffer, uint32 
 			enlargeSize = idealEnlargeSize; // just use the idealSize
 		// check with maximum size
 		uint32 maxEnlargeSize = memoryRangeObj->sizeLimit - memoryRangeObj->bufferLimit;
-		enlargeSize = std::min(maxEnlargeSize, enlargeSize);
+		enlargeSize = mymin(maxEnlargeSize, enlargeSize);
 		if( enlargeSize )
 		{
 			// enlarge
@@ -449,7 +449,7 @@ uint32 streamEx_dynamicMemoryRange_writeData(void *object, void *buffer, uint32 
 	}
 	// write boundary data
 	bufferBytesLeft = memoryRangeObj->bufferLimit - memoryRangeObj->bufferPosition;
-	bytesToWrite = std::min(bufferBytesLeft, nLen);
+	bytesToWrite = mymin(bufferBytesLeft, nLen);
 	if( bytesToWrite )
 	{
 		RtlCopyMemory(memoryRangeObj->buffer + memoryRangeObj->bufferPosition, bBuffer, bytesToWrite);
@@ -596,7 +596,7 @@ uint32 streamEx_substream_readData(void *object, void *buffer, uint32 len)
 
 uint32 streamEx_substream_writeData(void *object, void *buffer, uint32 len)
 {	
-	__debugbreak();
+	__debugbreak(); // no write access for substreams?
 	return 0;
 }
 
@@ -608,8 +608,7 @@ uint32 streamEx_substream_getSize(void *object)
 
 void streamEx_substream_setSize(void *object, uint32 size)
 {
-		
-	__debugbreak(); 
+	__debugbreak(); // not implemented 
 }
 
 uint32 streamEx_substream_getSeek(void *object)

@@ -3,8 +3,8 @@
 #include "ticker.h"
 #include "metiscoinMiner.h"
 
-#define STEP_SIZE 0x100000
-#define NUM_STEPS 0x100
+#define STEP_SIZE 0x10000
+#define NUM_STEPS 0x1000
 //#define STEP_MULTIPLIER 0x10000
 
 MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
@@ -25,10 +25,11 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 //	OpenCLKernel* kernel_shavite = program_shavite->getKernel("shavite512");
 
 	std::vector<std::string> files_keccak;
+	files_keccak.push_back("opencl/common.cl");
 	files_keccak.push_back("opencl/keccak.cl");
 	files_keccak.push_back("opencl/shavite.cl");
 	files_keccak.push_back("opencl/metis.cl");
-	files_keccak.push_back("opencl/common.cl");
+	files_keccak.push_back("opencl/tables.cl");
 	files_keccak.push_back("opencl/miner.cl");
 #ifdef VALIDATE_ALGORITHMS
 	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak, "-DVALIDATE_ALGORITHMS");
@@ -88,7 +89,7 @@ void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
 		sph_keccak512_init(&ctx_keccak);
 		sph_keccak512(&ctx_keccak, &block->version, 80);
 
-		q->enqueueWriteBuffer(u, ctx_keccak.u.wide, 25*sizeof(cl_ulong));
+		q->enqueueWriteBuffer(u, ctx_keccak.u.narrow, 25*sizeof(cl_ulong));
 		q->enqueueWriteBuffer(buff, ctx_keccak.buf, 4);
 		size_t wgs = kernel_keccak_noinit->getWorkGroupSize(device);
 #ifdef DEBUG_WORKGROUP_SIZE
