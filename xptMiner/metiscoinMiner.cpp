@@ -3,12 +3,14 @@
 #include "ticker.h"
 #include "metiscoinMiner.h"
 
-#define STEP_SIZE 0x10000
-#define NUM_STEPS 0x1000
+//#define STEP_SIZE 0x10000
+//#define NUM_STEPS 0x1000
 //#define STEP_MULTIPLIER 0x10000
 
-MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
+MetiscoinOpenCLConstant::MetiscoinOpenCLConstant(int _device_num, uint32_t _step_size) {
 	this->device_num = _device_num;
+	this->STEP_SIZE = _step_size;
+	this->NUM_STEPS = (uint32)(0x10000000L/STEP_SIZE);
 	printf("Initializing GPU %d\n", device_num);
 	OpenCLMain &main = OpenCLMain::getInstance();
 	OpenCLDevice* device = main.getDevice(device_num);
@@ -30,7 +32,7 @@ MetiscoinOpenCL::MetiscoinOpenCL(int _device_num) {
 	files_keccak.push_back("opencl/shavite.cl");
 	files_keccak.push_back("opencl/metis.cl");
 	files_keccak.push_back("opencl/tables.cl");
-	files_keccak.push_back("opencl/miner.cl");
+	files_keccak.push_back("opencl/miner_constant.cl");
 #ifdef VALIDATE_ALGORITHMS
 	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak, "-DVALIDATE_ALGORITHMS");
 #else
@@ -60,7 +62,7 @@ int log2(size_t value) {
 	return ret;
 }
 
-void MetiscoinOpenCL::metiscoin_process(minerMetiscoinBlock_t* block)
+void MetiscoinOpenCLConstant::metiscoin_process(minerMetiscoinBlock_t* block)
 {
 
 	block->nonce = 0;

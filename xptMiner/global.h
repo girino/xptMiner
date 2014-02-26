@@ -43,80 +43,17 @@ typedef struct
 
 #include"transaction.h"
 
+enum GPUALGO { CONSTANT_MEMSPACE = 1, GLOBAL_MEMSPACE };
+
 // global settings for miner
 typedef struct  
 {
 	generalRequestTarget_t requestTarget;
-	uint32 protoshareMemoryMode;
-	// GPU
-	bool useGPU; // enable OpenCL
-	// GPU (MaxCoin specific)
-
 }minerSettings_t;
 
 extern minerSettings_t minerSettings;
 
-#define PROTOSHARE_MEM_512		(0)
-#define PROTOSHARE_MEM_256		(1)
-#define PROTOSHARE_MEM_128		(2)
-#define PROTOSHARE_MEM_32		(3)
-#define PROTOSHARE_MEM_8		(4)
-
 // block data struct
-
-typedef struct  
-{
-	// block header data (relevant for midhash)
-	uint32	version;
-	uint8	prevBlockHash[32];
-	uint8	merkleRoot[32];
-	uint32	nTime;
-	uint32	nBits;
-	uint32	nonce;
-	// birthday collision
-	uint32	birthdayA;
-	uint32	birthdayB;
-	uint32	uniqueMerkleSeed;
-
-	uint32	height;
-	uint8	merkleRootOriginal[32]; // used to identify work
-	uint8	target[32];
-	uint8	targetShare[32];
-}minerProtosharesBlock_t;
-
-typedef struct  
-{
-	// block header data
-	uint32	version;
-	uint8	prevBlockHash[32];
-	uint8	merkleRoot[32];
-	uint32	nTime;
-	uint32	nBits;
-	uint32	nonce;
-	uint32	uniqueMerkleSeed;
-	uint32	height;
-	uint8	merkleRootOriginal[32]; // used to identify work
-	uint8	target[32];
-	uint8	targetShare[32];
-}minerScryptBlock_t;
-
-typedef struct  
-{
-	// block header data
-	uint32	version;
-	uint8	prevBlockHash[32];
-	uint8	merkleRoot[32];
-	uint32	nTime;
-	uint32	nBits;
-	uint32	nonce;
-	uint32	uniqueMerkleSeed;
-	uint32	height;
-	uint8	merkleRootOriginal[32]; // used to identify work
-	uint8	target[32];
-	uint8	targetShare[32];
-	// found chain data
-	// todo
-}minerPrimecoinBlock_t;
 
 typedef struct  
 {
@@ -134,44 +71,6 @@ typedef struct
 	uint8	target[32];
 	uint8	targetShare[32];
 }minerMetiscoinBlock_t; // identical to scryptBlock
-
-typedef struct  
-{
-	// block data (order and memory layout is important)
-	uint32	version;
-	uint8	prevBlockHash[32];
-	uint8	merkleRoot[32];
-	uint32	nTime;
-	uint32	nBits;
-	uint32	nonce;
-	// remaining data
-	uint32	uniqueMerkleSeed;
-	uint32	height;
-	uint8	merkleRootOriginal[32]; // used to identify work
-	uint8	target[32];
-	uint8	targetShare[32];
-}minerMaxcoinBlock_t; // identical to scryptBlock
-
-
-typedef struct  
-{
-	// block data (order and memory layout is important)
-	uint32	version;
-	uint8	prevBlockHash[32];
-	uint8	merkleRoot[32];
-	uint32	nBits; // Riecoin has order of nBits and nTime exchanged
-	uint64	nTime; // Riecoin has 64bit timestamps
-	uint8	nOffset[32];
-	// remaining data
-	uint32	uniqueMerkleSeed;
-	uint32	height;
-	uint8	merkleRootOriginal[32]; // used to identify work
-	// uint8	target[32];
-	// uint8	targetShare[32];
-	// compact target
-	uint32  targetCompact;
-	uint32  shareTargetCompact;
-}minerRiecoinBlock_t;
 
 void xptMiner_submitShare(minerMetiscoinBlock_t* block);
 

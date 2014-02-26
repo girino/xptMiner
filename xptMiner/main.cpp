@@ -51,111 +51,6 @@ uint32 miningStartTime = 0;
 std::vector<MetiscoinOpenCL *> gpu_processors;
 
 /*
- * Submit Protoshares share
- */
-void xptMiner_submitShare(minerProtosharesBlock_t* block)
-{
-	printf("Share found! (Blockheight: %d)\n", block->height);
-	EnterCriticalSection(&cs_xptClient);
-	if( xptClient == NULL || xptClient_isDisconnected(xptClient, NULL) == true )
-	{
-		printf("Share submission failed - No connection to server\n");
-        LeaveCriticalSection(&cs_xptClient);
-		return;
-	}
-	// submit block
-	xptShareToSubmit_t* xptShare = (xptShareToSubmit_t*)malloc(sizeof(xptShareToSubmit_t));
-	memset(xptShare, 0x00, sizeof(xptShareToSubmit_t));
-	xptShare->algorithm = ALGORITHM_PROTOSHARES;
-	xptShare->version = block->version;
-	xptShare->nTime = block->nTime;
-	xptShare->nonce = block->nonce;
-	xptShare->nBits = block->nBits;
-	xptShare->nBirthdayA = block->birthdayA;
-	xptShare->nBirthdayB = block->birthdayB;
-	memcpy(xptShare->prevBlockHash, block->prevBlockHash, 32);
-	memcpy(xptShare->merkleRoot, block->merkleRoot, 32);
-	memcpy(xptShare->merkleRootOriginal, block->merkleRootOriginal, 32);
-	//userExtraNonceLength = std::min(userExtraNonceLength, 16);
-	sint32 userExtraNonceLength = sizeof(uint32);
-	uint8* userExtraNonceData = (uint8*)&block->uniqueMerkleSeed;
-	xptShare->userExtraNonceLength = userExtraNonceLength;
-	memcpy(xptShare->userExtraNonceData, userExtraNonceData, userExtraNonceLength);
-	xptClient_foundShare(xptClient, xptShare);
-    LeaveCriticalSection(&cs_xptClient);
-}
-
-/*
- * Submit Scrypt share
- */
-void xptMiner_submitShare(minerScryptBlock_t* block)
-{
-	printf("Share found! (Blockheight: %d)\n", block->height);
-	EnterCriticalSection(&cs_xptClient);
-	if( xptClient == NULL || xptClient_isDisconnected(xptClient, NULL) == true )
-	{
-		printf("Share submission failed - No connection to server\n");
-		LeaveCriticalSection(&cs_xptClient);
-		return;
-	}
-	// submit block
-	xptShareToSubmit_t* xptShare = (xptShareToSubmit_t*)malloc(sizeof(xptShareToSubmit_t));
-	memset(xptShare, 0x00, sizeof(xptShareToSubmit_t));
-	xptShare->algorithm = ALGORITHM_SCRYPT;
-	xptShare->version = block->version;
-	xptShare->nTime = block->nTime;
-	xptShare->nonce = block->nonce;
-	xptShare->nBits = block->nBits;
-	memcpy(xptShare->prevBlockHash, block->prevBlockHash, 32);
-	memcpy(xptShare->merkleRoot, block->merkleRoot, 32);
-	memcpy(xptShare->merkleRootOriginal, block->merkleRootOriginal, 32);
-	//userExtraNonceLength = std::min(userExtraNonceLength, 16);
-	sint32 userExtraNonceLength = sizeof(uint32);
-	uint8* userExtraNonceData = (uint8*)&block->uniqueMerkleSeed;
-	xptShare->userExtraNonceLength = userExtraNonceLength;
-	memcpy(xptShare->userExtraNonceData, userExtraNonceData, userExtraNonceLength);
-	xptClient_foundShare(xptClient, xptShare);
-	LeaveCriticalSection(&cs_xptClient);
-}
-
-/*
- * Submit Primecoin share
- */
-void xptMiner_submitShare(minerPrimecoinBlock_t* block)
-{
-	printf("Share found! (Blockheight: %d)\n", block->height);
-	EnterCriticalSection(&cs_xptClient);
-	
-	if( xptClient == NULL || xptClient_isDisconnected(xptClient, NULL) == true )
-	{
-		printf("Share submission failed - No connection to server\n");
-      LeaveCriticalSection(&cs_xptClient);
-
-		return;
-	}
-	// submit block
-	xptShareToSubmit_t* xptShare = (xptShareToSubmit_t*)malloc(sizeof(xptShareToSubmit_t));
-	memset(xptShare, 0x00, sizeof(xptShareToSubmit_t));
-	xptShare->algorithm = ALGORITHM_PRIME;
-	xptShare->version = block->version;
-	xptShare->nTime = block->nTime;
-	xptShare->nonce = block->nonce;
-	xptShare->nBits = block->nBits;
-	memcpy(xptShare->prevBlockHash, block->prevBlockHash, 32);
-	memcpy(xptShare->merkleRoot, block->merkleRoot, 32);
-	memcpy(xptShare->merkleRootOriginal, block->merkleRootOriginal, 32);
-	//userExtraNonceLength = std::min(userExtraNonceLength, 16);
-	sint32 userExtraNonceLength = sizeof(uint32);
-	uint8* userExtraNonceData = (uint8*)&block->uniqueMerkleSeed;
-	xptShare->userExtraNonceLength = userExtraNonceLength;
-	memcpy(xptShare->userExtraNonceData, userExtraNonceData, userExtraNonceLength);
-	__debugbreak(); 
-	xptClient_foundShare(xptClient, xptShare);
-    LeaveCriticalSection(&cs_xptClient);
-
-}
-
-/*
  * Submit Metiscoin share
  */
 void xptMiner_submitShare(minerMetiscoinBlock_t* block)
@@ -194,10 +89,8 @@ void *xptMiner_minerThread(void *arg)
 #endif
 {
 	// local work data
-	minerProtosharesBlock_t minerProtosharesBlock = {0};
-	minerScryptBlock_t minerScryptBlock = {0};
 	minerMetiscoinBlock_t minerMetiscoinBlock = {0};
-	minerPrimecoinBlock_t minerPrimecoinBlock = {0}; 
+
 	MetiscoinOpenCL *processor = gpu_processors.back();
 	gpu_processors.pop_back();
 
@@ -418,11 +311,12 @@ typedef struct
 	char* host;
 	sint32 port;
 	sint32 numThreads;
-	uint32 ptsMemoryMode;
 	// GPU / OpenCL options
 	uint32 deviceNum;
 	bool listDevices;
 	std::vector<int> deviceList;
+	GPUALGO algo;
+	uint32 step_size;
 
 	// mode option
 	uint32 mode;
@@ -451,6 +345,8 @@ void xptMiner_parseCommandline(int argc, char **argv)
 {
 	sint32 cIdx = 1;
 	commandlineInput.donationPercent = 3.0f;
+	commandlineInput.algo = CONSTANT_MEMSPACE;
+	commandlineInput.step_size = 0x10000;
 	while( cIdx < argc )
 	{
 		char* argument = argv[cIdx];
@@ -513,26 +409,6 @@ void xptMiner_parseCommandline(int argc, char **argv)
 			}
 			cIdx++;
 		}
-		else if( memcmp(argument, "-m512", 6)==0 )
-		{
-			commandlineInput.ptsMemoryMode = PROTOSHARE_MEM_512;
-		}
-		else if( memcmp(argument, "-m256", 6)==0 )
-		{
-			commandlineInput.ptsMemoryMode = PROTOSHARE_MEM_256;
-		}
-		else if( memcmp(argument, "-m128", 6)==0 )
-		{
-			commandlineInput.ptsMemoryMode = PROTOSHARE_MEM_128;
-		}
-		else if( memcmp(argument, "-m32", 5)==0 )
-		{
-			commandlineInput.ptsMemoryMode = PROTOSHARE_MEM_32;
-		}
-		else if( memcmp(argument, "-m8", 4)==0 )
-		{
-			commandlineInput.ptsMemoryMode = PROTOSHARE_MEM_8;
-		}
 		else if( memcmp(argument, "-f", 3)==0 )
 		{
 			if( cIdx >= argc )
@@ -571,6 +447,42 @@ void xptMiner_parseCommandline(int argc, char **argv)
 			commandlineInput.deviceList.push_back(atoi(list.c_str()));
 			cIdx++;
 		}
+		// algorithm
+		else if( memcmp(argument, "-a", 3)==0 || memcmp(argument, "-algo", 6)==0 )
+		{
+			if( cIdx >= argc )
+			{
+				printf("Missing amount number after -a option\n");
+				exit(0);
+			}
+			int tmp_algo = atoi(argv[cIdx]);
+			if (tmp_algo == 1) {
+				commandlineInput.algo = CONSTANT_MEMSPACE;
+			} else if (tmp_algo == 2) {
+				commandlineInput.algo = GLOBAL_MEMSPACE;
+			} else {
+				printf("-a parameter out of range. Valid values are \"1\" for constant and \"2\" for global memspace.");
+				exit(0);
+			}
+			cIdx++;
+		}
+		// algorithm
+		else if( memcmp(argument, "-s", 3)==0 || memcmp(argument, "-step", 6)==0 )
+		{
+			if( cIdx >= argc )
+			{
+				printf("Missing amount number after -s option\n");
+				exit(0);
+			}
+			uint32 temp_step = atoi(argv[cIdx]);
+			commandlineInput.step_size = temp_step;
+			uint32 powof2 = 1<<log2(temp_step);
+			if (powof2 != temp_step || temp_step < 0x8000 || temp_step > 0x10000000) {
+				printf("-s parameter out of range. Valid values are powers of 2 between 0x8000 and 0x10000000.");
+				exit(0);
+			}
+			cIdx++;
+		}
 		else if( memcmp(argument, "-help", 6)==0 || memcmp(argument, "--help", 7)==0 )
 		{
 			xptMiner_printHelp();
@@ -595,7 +507,6 @@ int main(int argc, char** argv)
 	commandlineInput.host = "ypool.net";
 	srand(getTimeMilliseconds());
 	commandlineInput.port = 8080 + (rand()%8); // use random port between 8080 and 8087
-	commandlineInput.ptsMemoryMode = PROTOSHARE_MEM_256;
   uint32_t numcpu = 1; // in case we fall through;	
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
   int mib[4];
@@ -632,7 +543,6 @@ sysctl(mib, 2, &numcpu, &len, NULL, 0);
 	commandlineInput.numThreads = 1;
 	commandlineInput.numThreads = std::min(std::max(commandlineInput.numThreads, 1), 4);
 	xptMiner_parseCommandline(argc, argv);
-	minerSettings.protoshareMemoryMode = commandlineInput.ptsMemoryMode;
 	printf("\xC9\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBB\n");
 	printf("\xBA  xptMiner (v1.1) + GPU Metiscoin Miner (v0.1)    \xBA\n");
 	printf("\xBA  author: girino (GPU Metiscoin Miner)            \xBA\n");
@@ -644,8 +554,6 @@ sysctl(mib, 2, &numcpu, &len, NULL, 0);
 	printf("\xBA                                                  \xBA\n");
 	printf("\xC8\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\n");
 	printf("Launching miner...\n");
-	uint32 mbTable[] = {512,256,128,32,8};
-	//printf("Using %d megabytes of memory per thread\n", mbTable[min(commandlineInput.ptsMemoryMode,(sizeof(mbTable)/sizeof(mbTable[0])))]);
 	printf("Using %d threads\n", commandlineInput.numThreads);
 	
 	printf("\nFee Percentage:  %.2f%%. To set, use \"-f\" flag e.g. \"-f 2.5\" is 2.5%% donation\n\n", commandlineInput.donationPercent);
@@ -701,7 +609,9 @@ sysctl(mib, 2, &numcpu, &len, NULL, 0);
 	printf("Initializing GPU...\n");
 	for (int i = 0; i < commandlineInput.deviceList.size(); i++) {
 		printf("Initing device %d.\n", i);
-		gpu_processors.push_back(new MetiscoinOpenCL(commandlineInput.deviceList[i]));
+		if (commandlineInput.algo == CONSTANT_MEMSPACE) {
+			gpu_processors.push_back(new MetiscoinOpenCLConstant(commandlineInput.deviceList[i], commandlineInput.step_size));
+		}
 		printf("Device %d Inited.\n", i);
 	}
 	printf("All GPUs Initialized...\n");
