@@ -11,8 +11,6 @@
 #include"win.h" // port from windows
 #endif
 
-#include <gmp-i386.h>
-
 #define mymax(a, b) \
     ((a)>(b)?(a):(b))
 
