@@ -36,7 +36,11 @@ uchar4 MAKE_UCHAR4(uchar a, uchar b, uchar c, uchar d) { uchar4 temp = ((uchar4)
 
 #define SPH_ROTL64(x, n)    rotate((ulong)(x), (ulong)(n))
 #define SPH_ROTR64(x, n)    SPH_ROTL64(x, (64 - (n)))
-#define SWAP32(x)   (as_uint(as_uchar4(x).s3210))
+//#define SWAP32(x)   (as_uint(as_uchar4(x).s3210))
+#define SWAP32(src) (((uint)(((const unsigned char *)(&(src)))[0]) << 24) \
+                        | ((uint)(((const unsigned char *)(&(src)))[1]) << 16) \
+                        | ((uint)(((const unsigned char *)(&(src)))[2]) << 8) \
+                        | (uint)(((const unsigned char *)(&(src)))[3]))
 #define SWAP64(x)   (as_ulong(as_uchar8(x).s76543210))
 
 #endif
