@@ -79,16 +79,16 @@ kernel KERNEL_ATTRIB void
 keccak_step_noinit(constant ulong* restrict wide,
                    constant uint*  restrict buf,
                    global   ulong* restrict out,
-                   uint begin_nonce)
+                   constant uint*  restrict begin_nonce)
 {
     size_t id = get_global_id(0);
-    uint nonce = (uint)id + begin_nonce;
+    uint nonce = (uint)id + *begin_nonce;
     ulong hash[8];
 
     // keccak
     keccak(wide, buf, nonce, hash);
 
-    #pragma unroll
+    #pragma unroll 8
     for (int i = 0; i < 8; i++) {
         out[(id * 8)+i] = hash[i];
     }
@@ -96,11 +96,8 @@ keccak_step_noinit(constant ulong* restrict wide,
 
 
 kernel KERNEL_ATTRIB void 
-shavite_step(global ulong* in_out,
-        global   uint*  restrict AES0,
-        global   uint*  restrict AES1,
-        global   uint*  restrict AES2,
-        global   uint*  restrict AES3)
+shavite_step(global ulong* restrict in_out,
+        	 global uint*  restrict AES)
 {
     size_t id = get_global_id(0);
     ulong hash[8];
@@ -111,35 +108,19 @@ shavite_step(global ulong* in_out,
     local uint shavite_lookup2[256];
     local uint shavite_lookup3[256];
 
-	size_t lid = get_local_id(0);
-	size_t lsz = get_local_size(0);
-	if (lsz > 256) {
-		if (lid < 256) {
-			shavite_lookup0[lid] = AES0[lid];
-			shavite_lookup1[lid] = AES1[lid];
-			shavite_lookup2[lid] = AES2[lid];
-			shavite_lookup3[lid] = AES3[lid];
-		}
-	} else {
-		uint num_steps = 256/lsz;
-#pragma unroll
-		for (int i = 0; i < num_steps; i++) {
-			size_t idx = lid+lsz*i;
-			shavite_lookup0[idx] = AES0[idx];
-			shavite_lookup1[idx] = AES1[idx];
-			shavite_lookup2[idx] = AES2[idx];
-			shavite_lookup3[idx] = AES3[idx];
-		}
-	}
-
-	barrier(CLK_LOCAL_MEM_FENCE);
+	event_t e;
+	e = async_work_group_copy(shavite_lookup0, AES, 256, 0);
+	e = async_work_group_copy(shavite_lookup1, AES+256, 256, 0);
+	e = async_work_group_copy(shavite_lookup2, AES+512, 256, 0);
+	e = async_work_group_copy(shavite_lookup3, AES+768, 256, 0);
 
     // prepares data
-    #pragma unroll
+    #pragma unroll 8
     for (int i = 0; i < 8; i++) {
         hash[i] = in_out[(id * 8)+i];
     }
 
+    wait_group_events(1, &e);
     //shavite_init(&ctx_shavite);
     //shavite_core_64(&ctx_shavite, hash);
     shavite((uint *)hash,
@@ -148,69 +129,51 @@ shavite_step(global ulong* in_out,
             shavite_lookup2,
             shavite_lookup3);
 
-    #pragma unroll
+    #pragma unroll 8
     for (int i = 0; i < 8; i++) {
         in_out[(id * 8)+i] = hash[i];
     }
 }
 
 kernel KERNEL_ATTRIB void 
-metis_step(global ulong* in,
-           global uint*  out,
-           global uint*  outcount,
-                  uint   begin_nonce,
-                  uint   target,
-                  global   uint*  restrict mixtab0,
-                  global   uint*  restrict mixtab1,
-                  global   uint*  restrict mixtab2,
-                  global   uint*  restrict mixtab3)
+metis_step(global ulong* restrict in,
+           global uint*  restrict out,
+           global uint*  restrict outcount,
+           constant uint*  restrict begin_nonce,
+           constant  uint*  restrict target,
+           global uint*  restrict mixtab)
 {
     size_t id = get_global_id(0);
-    uint nonce = (uint)id + begin_nonce;
+    uint nonce = (uint)id + *begin_nonce;
     ulong hash[8];
 
-
     // Copy global lookup table into local memory
+    //local uint local_mixtab[1024];
     local uint local_mixtab0[256];
     local uint local_mixtab1[256];
     local uint local_mixtab2[256];
     local uint local_mixtab3[256];
 
-	size_t lid = get_local_id(0);
-	size_t lsz = get_local_size(0);
-	if (lsz > 256) {
-		if (lid < 256) {
-			local_mixtab0[lid] = mixtab0[lid];
-			local_mixtab1[lid] = mixtab1[lid];
-			local_mixtab2[lid] = mixtab2[lid];
-			local_mixtab3[lid] = mixtab3[lid];
-		}
-	} else {
-		uint num_steps = 256/lsz;
-#pragma unroll
-		for (int i = 0; i < num_steps; i++) {
-			size_t idx = lid+lsz*i;
-			local_mixtab0[idx] = mixtab0[idx];
-			local_mixtab1[idx] = mixtab1[idx];
-			local_mixtab2[idx] = mixtab2[idx];
-			local_mixtab3[idx] = mixtab3[idx];
-		}
-	}
-	// waits the copies
-	barrier(CLK_LOCAL_MEM_FENCE);
+    event_t e;
+    e = async_work_group_copy (local_mixtab0, mixtab, 256, 0);
+    e = async_work_group_copy (local_mixtab1, mixtab+256, 256, e);
+    e = async_work_group_copy (local_mixtab2, mixtab+512, 256, e);
+    e = async_work_group_copy (local_mixtab3, mixtab+768, 256, e);
 
     // prepares data
+#pragma unroll 8
     for (int i = 0; i < 8; i++) {
         hash[i] = in[(id * 8)+i];
     }
 
+    wait_group_events(1, &e);
     metis((uint *)hash,
           local_mixtab0,
           local_mixtab1,
           local_mixtab2,
           local_mixtab3);
 
-    if( *(uint*)((uchar*)hash + 28) <= target )
+    if( *(uint*)((uchar*)hash + 28) <= *target )
     {
         out[atomic_inc(outcount)] = nonce;
     }

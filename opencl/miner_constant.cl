@@ -12,8 +12,8 @@ metiscoin_process(constant ulong* wide,
                   constant char*  buf,
                   global   uint*  out,
                   global   uint*  outcount,
-                           uint   begin_nonce,
-                           uint   target,
+                   uint   begin_nonce,
+                   uint   target,
                   global   uint*  restrict AES0,
                   global   uint*  restrict AES1,
                   global   uint*  restrict AES2,
@@ -80,16 +80,16 @@ kernel KERNEL_ATTRIB void
 keccak_step_noinit(constant ulong* restrict wide,
                    constant uint*  restrict buf,
                    global   ulong* restrict out,
-                   uint begin_nonce)
+                   constant uint*  restrict begin_nonce)
 {
     size_t id = get_global_id(0);
-    uint nonce = (uint)id + begin_nonce;
+    uint nonce = (uint)id + *begin_nonce;
     ulong hash[8];
 
     // keccak
     keccak(wide, buf, nonce, hash);
 
-    #pragma unroll
+    #pragma unroll 8
     for (int i = 0; i < 8; i++) {
         out[(id * 8)+i] = hash[i];
     }
@@ -97,7 +97,7 @@ keccak_step_noinit(constant ulong* restrict wide,
 
 
 kernel KERNEL_ATTRIB void 
-shavite_step(global ulong* in_out)
+shavite_step(global ulong* restrict in_out)
 {
     size_t id = get_global_id(0);
     ulong hash[8];
@@ -132,7 +132,7 @@ shavite_step(global ulong* in_out)
 	barrier(CLK_LOCAL_MEM_FENCE);
 
     // prepares data
-    #pragma unroll
+    #pragma unroll 8
     for (int i = 0; i < 8; i++) {
         hash[i] = in_out[(id * 8)+i];
     }
@@ -145,21 +145,21 @@ shavite_step(global ulong* in_out)
             shavite_lookup2,
             shavite_lookup3);
 
-    #pragma unroll
+    #pragma unroll 8
     for (int i = 0; i < 8; i++) {
         in_out[(id * 8)+i] = hash[i];
     }
 }
 
-kernel KERNEL_ATTRIB void 
-metis_step(global ulong* in,
-           global uint*  out,
-           global uint*  outcount,
-                  uint   begin_nonce,
-                  uint   target)
+kernel KERNEL_ATTRIB void
+metis_step(global   ulong* restrict in,
+           global   uint*  restrict out,
+           global   uint*  restrict outcount,
+           constant uint*  restrict begin_nonce,
+           constant uint*  restrict target)
 {
     size_t id = get_global_id(0);
-    uint nonce = (uint)id + begin_nonce;
+    uint nonce = (uint)id + *begin_nonce;
     ulong hash[8];
 
 
@@ -193,6 +193,7 @@ metis_step(global ulong* in,
 	barrier(CLK_LOCAL_MEM_FENCE);
 
     // prepares data
+#pragma unroll 8
     for (int i = 0; i < 8; i++) {
         hash[i] = in[(id * 8)+i];
     }
@@ -203,7 +204,14 @@ metis_step(global ulong* in,
           local_mixtab2,
           local_mixtab3);
 
-    if( *(uint*)((uchar*)hash + 28) <= target )
+    // for debug
+#ifdef VALIDATE_ALGORITHMS
+    for (int i = 0; i < 8; i++) {
+            in[(id * 8)+i] = hash[i];
+    }
+#endif
+
+    if( *(uint*)((uchar*)hash + 28) <= *target )
     {
         out[atomic_inc(outcount)] = nonce;
     }

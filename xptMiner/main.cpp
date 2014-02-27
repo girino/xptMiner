@@ -205,7 +205,7 @@ void xptMiner_xptQueryWorkLoop()
 	if(minerSettings.requestTarget.donationPercent > 0.1f)
 	{
         // coin Dev
-        xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 1.0 / 7.0), 0);
+        xptClient_addDeveloperFeeEntry(xptClient, "MSwMSMc3mZdYak5J8z1TYYasqgpYEGXjBZ", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 1.0 / 7.0), 0);
         // Girino
         xptClient_addDeveloperFeeEntry(xptClient, "MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8", getFeeFromDouble(minerSettings.requestTarget.donationPercent * 4.0 / 7.0), 0);
         // GigaWatt
@@ -334,8 +334,7 @@ void xptMiner_printHelp()
 	puts("                        You can specify a port after the url using -o url:port");
 	puts("   -u                   The username (workername) used for login");
 	puts("   -p                   The password used for login");
-	puts("   -t <num>             The number of threads for mining (default is 1)");
-	puts("   -f <num>             Donation amount for dev (default donates 2.5% to dev)");
+	puts("   -f <num>             Donation amount for dev (default donates 3% to devs)");
 	puts("   -d <num>,<num>,...   List of GPU devices to use (default is 0).");
 	puts("Example usage:");
 	puts("  xptminer.exe -o http://ypool.net:10034 -u workername.pts_1 -p pass -d 0");
@@ -346,7 +345,7 @@ void xptMiner_parseCommandline(int argc, char **argv)
 	sint32 cIdx = 1;
 	commandlineInput.donationPercent = 3.0f;
 	commandlineInput.algo = CONSTANT_MEMSPACE;
-	commandlineInput.step_size = 0x10000;
+	commandlineInput.step_size = 0x80000;
 	while( cIdx < argc )
 	{
 		char* argument = argv[cIdx];
@@ -474,11 +473,9 @@ void xptMiner_parseCommandline(int argc, char **argv)
 				printf("Missing amount number after -s option\n");
 				exit(0);
 			}
-			uint32 temp_step = atoi(argv[cIdx]);
-			commandlineInput.step_size = temp_step;
-			uint32 powof2 = 1<<log2(temp_step);
-			if (powof2 != temp_step || temp_step < 0x8000 || temp_step > 0x10000000) {
-				printf("-s parameter out of range. Valid values are powers of 2 between 0x8000 and 0x10000000.");
+			commandlineInput.step_size = 1<<atoi(argv[cIdx]);
+			if (commandlineInput.step_size < 0x8000 || commandlineInput.step_size > 0x10000000) {
+				printf("-s parameter out of range. Valid values range from 15 to 28.");
 				exit(0);
 			}
 			cIdx++;
@@ -544,19 +541,27 @@ sysctl(mib, 2, &numcpu, &len, NULL, 0);
 	commandlineInput.numThreads = std::min(std::max(commandlineInput.numThreads, 1), 4);
 	xptMiner_parseCommandline(argc, argv);
 	printf("\xC9\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBB\n");
-	printf("\xBA  xptMiner (v1.1) + GPU Metiscoin Miner (v0.1)    \xBA\n");
+	printf("\xBA  xptMiner (v1.6) + GPU Metiscoin Miner (v0.3)    \xBA\n");
 	printf("\xBA  author: girino (GPU Metiscoin Miner)            \xBA\n");
+	printf("\xBA          Gigawatt (performance improvements)     \xBA\n");
 	printf("\xBA          jh00   (xptMiner)                       \xBA\n");
 	printf("\xBA                                                  \xBA\n");
 	printf("\xBA  Please donate:                                  \xBA\n");
+	printf("\xBA  Girino (main author):                           \xBA\n");
 	printf("\xBA      MTC: MTq5EaAY9DvVXaByMEjJwVEhQWF1VVh7R8     \xBA\n");
 	printf("\xBA      BTC: 1GiRiNoKznfGbt8bkU1Ley85TgVV7ZTXce     \xBA\n");
 	printf("\xBA                                                  \xBA\n");
+	printf("\xBA  Gigawatt (author of most improvements):         \xBA\n");
+	printf("\xBA      MTC: MEu8jBkkVvTLwvpiPjWC9YntyDH2u5KwVy     \xBA\n");
+	printf("\xBA      BTC: 1E2egHUcLDAmcxcqZqpL18TPLx9Xj1akcV     \xBA\n");
+	printf("\xBA                                                  \xBA\n");
+	printf("\xBA  syswt (creator/devel of Metiscoin):             \xBA\n");
+	printf("\xBA      MTC: MSwMSMc3mZdYak5J8z1TYYasqgpYEGXjBZ     \xBA\n");
+	printf("\xBA                                                  \xBA\n");
 	printf("\xC8\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xCD\xBC\n");
 	printf("Launching miner...\n");
-	printf("Using %d threads\n", commandlineInput.numThreads);
 	
-	printf("\nFee Percentage:  %.2f%%. To set, use \"-f\" flag e.g. \"-f 2.5\" is 2.5%% donation\n\n", commandlineInput.donationPercent);
+	printf("\nFee Percentage:  %.2f%%. To set, use \"-f\" flag e.g. \"-f 4.5\" is 4.5%% donation\n\n", commandlineInput.donationPercent);
 #ifdef _WIN32
 	// set priority to below normal
 	SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
@@ -611,6 +616,8 @@ sysctl(mib, 2, &numcpu, &len, NULL, 0);
 		printf("Initing device %d.\n", i);
 		if (commandlineInput.algo == CONSTANT_MEMSPACE) {
 			gpu_processors.push_back(new MetiscoinOpenCLConstant(commandlineInput.deviceList[i], commandlineInput.step_size));
+		} else if (commandlineInput.algo == GLOBAL_MEMSPACE) {
+			gpu_processors.push_back(new MetiscoinOpenCLGlobal(commandlineInput.deviceList[i], commandlineInput.step_size));
 		}
 		printf("Device %d Inited.\n", i);
 	}
