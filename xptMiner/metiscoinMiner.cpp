@@ -243,7 +243,7 @@ MetiscoinOpenCLGlobal::MetiscoinOpenCLGlobal(int _device_num, uint32_t _step_siz
 	std::vector<std::string> files_keccak;
 	files_keccak.push_back("opencl/common.cl");
 	files_keccak.push_back("opencl/keccak.cl");
-	files_keccak.push_back("opencl/shavite.cl");
+	files_keccak.push_back("opencl/shavite2.cl");
 	files_keccak.push_back("opencl/metis.cl");
 	files_keccak.push_back("opencl/tables_single.cl");
 	files_keccak.push_back("opencl/miner_global.cl");

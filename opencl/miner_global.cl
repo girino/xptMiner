@@ -100,7 +100,6 @@ shavite_step(global ulong* restrict in_out,
         	 global uint*  restrict AES)
 {
     size_t id = get_global_id(0);
-    ulong hash[8];
 
     // Copy global lookup table into local memory
     local uint shavite_lookup0[256];
@@ -114,25 +113,24 @@ shavite_step(global ulong* restrict in_out,
 	e = async_work_group_copy(shavite_lookup2, AES+512, 256, 0);
 	e = async_work_group_copy(shavite_lookup3, AES+768, 256, 0);
 
-    // prepares data
-    #pragma unroll 8
-    for (int i = 0; i < 8; i++) {
-        hash[i] = in_out[(id * 8)+i];
-    }
+	shavite_context	 ctx_shavite;
+	ulong hash0[8];
+	ulong hash1[8];
 
-    wait_group_events(1, &e);
-    //shavite_init(&ctx_shavite);
-    //shavite_core_64(&ctx_shavite, hash);
-    shavite((uint *)hash,
-            shavite_lookup0,
-            shavite_lookup1,
-            shavite_lookup2,
-            shavite_lookup3);
+	// prepares data
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		hash0[i] = in_out[(id * 8)+i];
+	}
 
-    #pragma unroll 8
-    for (int i = 0; i < 8; i++) {
-        in_out[(id * 8)+i] = hash[i];
-    }
+	shavite_init(&ctx_shavite);
+	shavite_core_64(&ctx_shavite, hash0);
+	shavite_close(&ctx_shavite, hash1, shavite_lookup0, shavite_lookup1, shavite_lookup2, shavite_lookup3);
+
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		in_out[(id * 8)+i] = hash1[i];
+	}
 }
 
 kernel KERNEL_ATTRIB void 
