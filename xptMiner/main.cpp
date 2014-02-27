@@ -344,7 +344,7 @@ void xptMiner_parseCommandline(int argc, char **argv)
 {
 	sint32 cIdx = 1;
 	commandlineInput.donationPercent = 3.0f;
-	commandlineInput.algo = CONSTANT_MEMSPACE;
+	commandlineInput.algo = GLOBAL_MEMSPACE;
 	commandlineInput.step_size = 0x80000;
 	while( cIdx < argc )
 	{

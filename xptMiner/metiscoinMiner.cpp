@@ -48,7 +48,8 @@ MetiscoinOpenCLConstant::MetiscoinOpenCLConstant(int _device_num, uint32_t _step
 	std::vector<std::string> files_keccak;
 	files_keccak.push_back("opencl/common.cl");
 	files_keccak.push_back("opencl/keccak.cl");
-	files_keccak.push_back("opencl/shavite2.cl");
+	files_keccak.push_back("opencl/shavite_NVidia.cl"); // way faster on NVidia, not much slower on AMD
+	//files_keccak.push_back("opencl/shavite_AMD.cl");
 	files_keccak.push_back("opencl/metis.cl");
 	files_keccak.push_back("opencl/tables.cl");
 	files_keccak.push_back("opencl/miner_constant.cl");
@@ -243,7 +244,8 @@ MetiscoinOpenCLGlobal::MetiscoinOpenCLGlobal(int _device_num, uint32_t _step_siz
 	std::vector<std::string> files_keccak;
 	files_keccak.push_back("opencl/common.cl");
 	files_keccak.push_back("opencl/keccak.cl");
-	files_keccak.push_back("opencl/shavite2.cl");
+	files_keccak.push_back("opencl/shavite_NVidia.cl"); // way faster on NVidia, not much slower on AMD
+	//files_keccak.push_back("opencl/shavite_AMD.cl");
 	files_keccak.push_back("opencl/metis.cl");
 	files_keccak.push_back("opencl/tables_single.cl");
 	files_keccak.push_back("opencl/miner_global.cl");

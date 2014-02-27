@@ -450,3 +450,31 @@ shavite_close(shavite_context *sc, void *dst,
     for (int u = 0; u < 16; u ++)
         enc32le((unsigned char *)dst + (u << 2), sc->h[u]);
 }
+
+void
+shavite(ulong* restrict in_out,
+        local uint* restrict local_AES0,
+        local uint* restrict local_AES1,
+        local uint* restrict local_AES2,
+        local uint* restrict local_AES3)
+{
+	shavite_context	 ctx_shavite;
+	ulong hash0[8];
+	ulong hash1[8];
+
+	// prepares data
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		hash0[i] = in_out[i];
+	}
+
+	shavite_init(&ctx_shavite);
+	shavite_core_64(&ctx_shavite, hash0);
+	shavite_close(&ctx_shavite, hash1, local_AES0, local_AES1, local_AES2, local_AES3);
+
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		in_out[i] = hash1[i];
+	}
+}
+
