@@ -111,7 +111,7 @@
 #define IOTA(r) { a00 ^= r; }
 
 
-void keccak(ulong *_wide, uint *_buf, uint nonce, ulong *dst)
+void keccak(constant ulong *_wide, constant uint *_buf, uint nonce, ulong *dst)
 {
     // Keccak init (doesn't do anything anymore)
     
