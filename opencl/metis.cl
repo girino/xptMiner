@@ -18,40 +18,53 @@
         x20 ^= x06; \
     }
 
+#define METIS_LOOKUP0 local_mixtab0
+#define METIS_LOOKUP1 local_mixtab1
+#define METIS_LOOKUP2 local_mixtab2
+#define METIS_LOOKUP3 local_mixtab3
+
 #define SMIX(x0, x1, x2, x3)   { \
     /* Consider computing "x" bytes free, but lookup is expensive. */  \
-    /* Interleve table lookups to reduce memory bank conflicts.    */  \
-    uint c0, c1, c2, c3;                 \
-    uint r0, r1, r2, r3;                 \
-                                         \
-    r1  = local_mixtab1[UINT_BYTE1(x0)]; \
-    r2  = local_mixtab2[UINT_BYTE2(x0)]; \
-    r3  = local_mixtab3[UINT_BYTE3(x0)]; \
-    c0  = local_mixtab0[UINT_BYTE0(x0)] ^ r1 ^ r2 ^ r3; \
-    /* x0 is now free as "temp" var */   \
-                                         \
-    c1 = local_mixtab0[UINT_BYTE0(x1)];  \
-    c2 = local_mixtab0[UINT_BYTE0(x2)];  \
-    c3 = local_mixtab0[UINT_BYTE0(x3)];  \
-    r0 = c1 ^ c2 ^ c3;                   \
-                                         \
-    c1 ^= local_mixtab1[UINT_BYTE1(x1)]; \
-    x0  = local_mixtab1[UINT_BYTE1(x2)]; \
-    c2 ^= x0; r1 ^= x0;                  \
-    x0  = local_mixtab1[UINT_BYTE1(x3)]; \
-    c3 ^= x0; r1 ^= x0;                  \
-                                         \
-    x0  = local_mixtab2[UINT_BYTE2(x1)]; \
-    r2 ^= x0; c1 ^= x0;                  \
-    c2 ^= local_mixtab2[UINT_BYTE2(x2)]; \
-    x0  = local_mixtab2[UINT_BYTE2(x3)]; \
-    c3 ^= x0; r2 ^= x0;                  \
-                                         \
-    x0  = local_mixtab3[UINT_BYTE3(x1)]; \
-    c1 ^= x0; r3 ^= x0;                  \
-    x0  = local_mixtab3[UINT_BYTE3(x2)]; \
-    c2 ^= x0; r3 ^= x0;                  \
-    c3 ^= local_mixtab3[UINT_BYTE3(x3)]; \
+    /* Group the lookups by table to hopefully use the cache.      */  \
+    uint c0, c1, c2, c3, r0, r1, r2, r3, t; \
+    \
+    c0  = METIS_LOOKUP0[(uchar)(x0 >> 24)]; \
+    c1  = METIS_LOOKUP0[(uchar)(x1 >> 24)]; \
+    r0  = c1;                               \
+    c2  = METIS_LOOKUP0[(uchar)(x2 >> 24)]; \
+    r0 ^= c2;                               \
+    c3  = METIS_LOOKUP0[(uchar)(x3 >> 24)]; \
+    r0 ^= c3;                               \
+    \
+    r1  = METIS_LOOKUP1[(uchar)(x0 >> 16)]; \
+    c0 ^= r1;                               \
+    c1 ^= METIS_LOOKUP1[(uchar)(x1 >> 16)]; \
+     t  = METIS_LOOKUP1[(uchar)(x2 >> 16)]; \
+    c2 ^= t;                                \
+    r1 ^= t;                                \
+     t  = METIS_LOOKUP1[(uchar)(x3 >> 16)]; \
+    c3 ^= t;                                \
+    r1 ^= t;                                \
+    \
+    r2  = METIS_LOOKUP2[(uchar)(x0 >> 8)];  \
+    c0 ^= r2;                               \
+     t  = METIS_LOOKUP2[(uchar)(x1 >> 8)];  \
+    c1 ^= t;                                \
+    r2 ^= t;                                \
+    c2 ^= METIS_LOOKUP2[(uchar)(x2 >> 8)];  \
+     t  = METIS_LOOKUP2[(uchar)(x3 >> 8)];  \
+    c3 ^= t;                                \
+    r2 ^= t;                                \
+    \
+    r3  = METIS_LOOKUP3[(uchar)(x0)];       \
+    c0 ^= r3;                               \
+     t  = METIS_LOOKUP3[(uchar)(x1)];       \
+    c1 ^= t;                                \
+    r3 ^= t;                                \
+     t  = METIS_LOOKUP3[(uchar)(x2)];       \
+    c2 ^= t;                                \
+    r3 ^= t;                                \
+    c3 ^= METIS_LOOKUP3[(uchar)(x3)];       \
     \
     x0 =  ((c0 ^  r0)        & (0xFF000000))  \
         | ((c1 ^  r1)        & (0x00FF0000))  \
