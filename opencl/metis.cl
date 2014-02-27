@@ -53,25 +53,22 @@
     c2 ^= x0; r3 ^= x0;                  \
     c3 ^= local_mixtab3[UINT_BYTE3(x3)]; \
     \
-    x0  = ((UINT_BYTE0(c0) ^ UINT_BYTE0(r0)) << 24); \
-    x1  = ((UINT_BYTE0(c1) ^ UINT_BYTE1(r0)) << 24); \
-    x2  = ((UINT_BYTE0(c2) ^ UINT_BYTE2(r0)) << 24); \
-    x3  = ((UINT_BYTE0(c3) ^ UINT_BYTE3(r0)) << 24); \
-    \
-    x0 |= ((UINT_BYTE1(c1) ^ UINT_BYTE1(r1)) << 16); \
-    x1 |= ((UINT_BYTE1(c2) ^ UINT_BYTE2(r1)) << 16); \
-    x2 |= ((UINT_BYTE1(c3) ^ UINT_BYTE3(r1)) << 16); \
-    x3 |= ((UINT_BYTE1(c0) ^ UINT_BYTE0(r1)) << 16); \
-    \
-    x0 |= ((UINT_BYTE2(c2) ^ UINT_BYTE2(r2)) <<  8); \
-    x1 |= ((UINT_BYTE2(c3) ^ UINT_BYTE3(r2)) <<  8); \
-    x2 |= ((UINT_BYTE2(c0) ^ UINT_BYTE0(r2)) <<  8); \
-    x3 |= ((UINT_BYTE2(c1) ^ UINT_BYTE1(r2)) <<  8); \
-    \
-    x0 |= (UINT_BYTE3(c3) ^ UINT_BYTE3(r3));         \
-    x1 |= (UINT_BYTE3(c0) ^ UINT_BYTE0(r3));         \
-    x2 |= (UINT_BYTE3(c1) ^ UINT_BYTE1(r3));         \
-    x3 |= (UINT_BYTE3(c2) ^ UINT_BYTE2(r3));         \
+    x0 =  ((c0 ^  r0)        & (0xFF000000))  \
+        | ((c1 ^  r1)        & (0x00FF0000))  \
+        | ((c2 ^  r2)        & (0x0000FF00))  \
+        | ((c3 ^  r3)        & (0x000000FF)); \
+    x1 =  ((c1 ^ (r0 <<  8)) & (0xFF000000))  \
+        | ((c2 ^ (r1 <<  8)) & (0x00FF0000))  \
+        | ((c3 ^ (r2 <<  8)) & (0x0000FF00))  \
+        | ((c0 ^ (r3 >> 24)) & (0x000000FF)); \
+    x2 =  ((c2 ^ (r0 << 16)) & (0xFF000000))  \
+        | ((c3 ^ (r1 << 16)) & (0x00FF0000))  \
+        | ((c0 ^ (r2 >> 16)) & (0x0000FF00))  \
+        | ((c1 ^ (r3 >> 16)) & (0x000000FF)); \
+    x3 =  ((c3 ^ (r0 << 24)) & (0xFF000000))  \
+        | ((c0 ^ (r1 >>  8)) & (0x00FF0000))  \
+        | ((c1 ^ (r2 >>  8)) & (0x0000FF00))  \
+        | ((c2 ^ (r3 >>  8)) & (0x000000FF)); \
 }
 
 
