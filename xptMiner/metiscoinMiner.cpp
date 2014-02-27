@@ -49,7 +49,7 @@ MetiscoinOpenCLConstant::MetiscoinOpenCLConstant(int _device_num, uint32_t _step
 	files_keccak.push_back("opencl/common.cl");
 	files_keccak.push_back("opencl/keccak.cl");
 	files_keccak.push_back("opencl/shavite.cl");
-	files_keccak.push_back("opencl/metis.cl");
+	files_keccak.push_back("opencl/metis2.cl");
 	files_keccak.push_back("opencl/tables.cl");
 	files_keccak.push_back("opencl/miner_constant.cl");
 #ifdef VALIDATE_ALGORITHMS
