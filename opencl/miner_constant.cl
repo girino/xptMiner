@@ -77,8 +77,8 @@ metiscoin_process(constant ulong* wide,
 
 
 kernel KERNEL_ATTRIB void 
-keccak_step_noinit(constant ulong* restrict wide,
-                   constant uint*  restrict buf,
+keccak_step_noinit(constant ulong* restrict _wide,
+                   constant uint*  restrict _buf,
                    global   ulong* restrict out,
                    constant uint*  restrict begin_nonce)
 {
@@ -86,8 +86,19 @@ keccak_step_noinit(constant ulong* restrict wide,
     uint nonce = (uint)id + *begin_nonce;
     ulong hash[8];
 
+    // constant was not good for that?
+//    keccak_context   ctx_keccak;
+//      ctx_keccak.lim = 72;
+//      ctx_keccak.ptr = 8;
+    uint buf = _buf[0];
+    ulong wide[25];
+#pragma unroll
+    for (int i = 0; i < 25; i++) {
+    	wide[i] = _wide[i];
+    }
+
     // keccak
-    keccak(wide, buf, nonce, hash);
+    keccak(wide, &buf, nonce, hash);
 
     #pragma unroll 8
     for (int i = 0; i < 8; i++) {
