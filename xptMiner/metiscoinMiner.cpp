@@ -247,7 +247,6 @@ MetiscoinOpenCLGlobal::MetiscoinOpenCLGlobal(int _device_num, uint32_t _step_siz
 	files_keccak.push_back("opencl/shavite_NVidia.cl"); // way faster on NVidia, not much slower on AMD
 	//files_keccak.push_back("opencl/shavite_AMD.cl");
 	files_keccak.push_back("opencl/metis.cl");
-	files_keccak.push_back("opencl/tables_single.cl");
 	files_keccak.push_back("opencl/miner_global.cl");
 #ifdef VALIDATE_ALGORITHMS
 	OpenCLProgram* program = device->getContext()->loadProgramFromFiles(files_keccak, "-DVALIDATE_ALGORITHMS");

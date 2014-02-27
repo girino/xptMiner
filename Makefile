@@ -5,7 +5,8 @@ CXXFLAGS = -Wall -Wextra -std=c++0x -O2 -fomit-frame-pointer
 OSVERSION := $(shell uname -s)
 
 ifeq ($(OSVERSION),CYGWIN_NT-6.1)
-	CXXFLAGS = -Wall -Wextra -std=gnu++0x -O2 -fomit-frame-pointer 
+	#CXXFLAGS = -Wall -Wextra -std=gnu++0x -O2 -fomit-frame-pointer 
+	CXXFLAGS = -std=gnu++0x -O2 -fomit-frame-pointer 
 endif
 
 CFLAGS = -Wall -Wextra -O2 -fomit-frame-pointer 

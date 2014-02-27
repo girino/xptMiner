@@ -49,7 +49,9 @@ typedef void *WSADATA;
 #define min(a, b) \
     ((a)<(b)?(a):(b))
 
+#ifndef __CYGWIN__
 #define FIONBIO 0
+#endif
 
 #define WSAIoctl(socket, ig1, ig2, ig3, ig4, ig5, ig6, ig7, ig8) \
 fcntl(socket, F_SETFL, O_NONBLOCK)
@@ -74,7 +76,9 @@ typedef void *(*LPTHREAD_START_ROUTINE)(void *);
 
 void CreateThread(LPVOID ig1, size_t ig2, LPTHREAD_START_ROUTINE func, LPVOID arg, uint32_t ig3,  LPDWORD tid);
 
+#ifndef __CYGWIN__
 #define __declspec(x) __##x
+#endif
 
 #define Sleep(x) usleep(x*1000)
 

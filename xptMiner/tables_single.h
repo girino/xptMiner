@@ -1,7 +1,7 @@
-#ifndef TABLES_CL
-#define TABLES_CL
+#ifndef TABLES__SINGLE_H
+#define TABLES__SINGLE_H
 
-#ifndef AESx(x)
+#ifndef AESx
 #define AESx(x) ((uint)(x))
 #endif
 

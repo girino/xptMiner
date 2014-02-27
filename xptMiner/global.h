@@ -1,11 +1,11 @@
 #ifndef __INCLUDE_GLOBAL_H__
 #define __INCLUDE_GLOBAL_H__
 
-#if defined(__WIN32__) || defined(__CYGWIN__)
+#if defined(__WIN32__) && !defined(__CYGWIN__)
 #pragma comment(lib,"Ws2_32.lib")
 #include<Winsock2.h>
 #include<ws2tcpip.h>
-#elif __CYGWIN__
+#elif defined(__CYGWIN__)
 #include"win.h" // port from windows
 #else
 #include"win.h" // port from windows

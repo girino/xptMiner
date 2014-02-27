@@ -139,8 +139,8 @@ kernel KERNEL_ATTRIB void
 metis_step(global ulong* restrict in,
            global uint*  restrict out,
            global uint*  restrict outcount,
-           constant uint*  restrict begin_nonce,
-           constant  uint*  restrict target,
+           global uint*  restrict begin_nonce,
+           global uint*  restrict target,
            global uint*  restrict mixtab)
 {
     size_t id = get_global_id(0);
@@ -173,9 +173,17 @@ metis_step(global ulong* restrict in,
           local_mixtab2,
           local_mixtab3);
 
+    // for debug
+#ifdef VALIDATE_ALGORITHMS
+    for (int i = 0; i < 8; i++) {
+            in[(id * 8)+i] = hash[i];
+    }
+#endif
+
     if( *(uint*)((uchar*)hash + 28) <= *target )
     {
         out[atomic_inc(outcount)] = nonce;
     }
 
 }
+
