@@ -100,7 +100,6 @@ kernel KERNEL_ATTRIB void
 shavite_step(global ulong* restrict in_out)
 {
     size_t id = get_global_id(0);
-    ulong hash[8];
 
     // Copy global lookup table into local memory
     local uint shavite_lookup0[256];
@@ -131,24 +130,25 @@ shavite_step(global ulong* restrict in_out)
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-    // prepares data
-    #pragma unroll 8
-    for (int i = 0; i < 8; i++) {
-        hash[i] = in_out[(id * 8)+i];
-    }
 
-    //shavite_init(&ctx_shavite);
-    //shavite_core_64(&ctx_shavite, hash);
-    shavite((uint *)hash,
-            shavite_lookup0,
-            shavite_lookup1,
-            shavite_lookup2,
-            shavite_lookup3);
+	shavite_context	 ctx_shavite;
+	ulong hash0[8];
+	ulong hash1[8];
 
-    #pragma unroll 8
-    for (int i = 0; i < 8; i++) {
-        in_out[(id * 8)+i] = hash[i];
-    }
+	// prepares data
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		hash0[i] = in_out[(id * 8)+i];
+	}
+
+	shavite_init(&ctx_shavite);
+	shavite_core_64(&ctx_shavite, hash0);
+	shavite_close(&ctx_shavite, hash1, shavite_lookup0, shavite_lookup1, shavite_lookup2, shavite_lookup3);
+
+#pragma unroll
+	for (int i = 0; i < 8; i++) {
+		in_out[(id * 8)+i] = hash1[i];
+	}
 }
 
 kernel KERNEL_ATTRIB void
@@ -160,7 +160,7 @@ metis_step(global   ulong* restrict in,
 {
     size_t id = get_global_id(0);
     uint nonce = (uint)id + *begin_nonce;
-    //ulong hash[8];
+    ulong hash[8];
 
 
     // Copy global lookup table into local memory
@@ -192,38 +192,26 @@ metis_step(global   ulong* restrict in,
 	// waits the copies
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	metis_context ctx_metis;
-	ulong hash0[8];
-	ulong hash1[8];
+    // prepares data
+#pragma unroll 8
+    for (int i = 0; i < 8; i++) {
+        hash[i] = in[(id * 8)+i];
+    }
 
-	// prepares data
-#pragma unroll
-	for (int i = 0; i < 8; i++) {
-		hash0[i] = in[(id * 8)+i];
-	}
-
-	// metis
-    metis_init(&ctx_metis);
-    metis_core_and_close(&ctx_metis, hash0, hash1,
-    		local_mixtab0,
-    		local_mixtab1,
-    		local_mixtab2,
-    		local_mixtab3);
-
-//    metis((uint *)hash,
-//          local_mixtab0,
-//          local_mixtab1,
-//          local_mixtab2,
-//          local_mixtab3);
+    metis((uint *)hash,
+          local_mixtab0,
+          local_mixtab1,
+          local_mixtab2,
+          local_mixtab3);
 
     // for debug
 #ifdef VALIDATE_ALGORITHMS
     for (int i = 0; i < 8; i++) {
-            in[(id * 8)+i] = hash1[i];
+            in[(id * 8)+i] = hash[i];
     }
 #endif
 
-    if( *(uint*)((uchar*)hash1 + 28) <= *target )
+    if( *(uint*)((uchar*)hash + 28) <= *target )
     {
         out[atomic_inc(outcount)] = nonce;
     }
