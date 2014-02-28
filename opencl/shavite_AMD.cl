@@ -1,25 +1,25 @@
 
 #define AES_ROUND_LE(X, Y)   { \
-        Y.s0  = local_AES0[UINT_BYTE3(X.s0)]; \
-        Y.s1  = local_AES1[UINT_BYTE2(X.s2)]; \
-        Y.s2  = local_AES2[UINT_BYTE1(X.s0)]; \
-        Y.s3  = local_AES3[UINT_BYTE0(X.s2)]; \
-        \
-        Y.s0 ^= local_AES1[UINT_BYTE2(X.s1)]; \
-        Y.s1 ^= local_AES2[UINT_BYTE1(X.s3)]; \
-        Y.s2 ^= local_AES3[UINT_BYTE0(X.s1)]; \
-        Y.s3 ^= local_AES0[UINT_BYTE3(X.s3)]; \
-        \
-        Y.s0 ^= local_AES2[UINT_BYTE1(X.s2)]; \
-        Y.s1 ^= local_AES3[UINT_BYTE0(X.s0)]; \
-        Y.s2 ^= local_AES0[UINT_BYTE3(X.s2)]; \
-        Y.s3 ^= local_AES1[UINT_BYTE2(X.s0)]; \
-        \
-        Y.s0 ^= local_AES3[UINT_BYTE0(X.s3)]; \
-        Y.s1 ^= local_AES0[UINT_BYTE3(X.s1)]; \
-        Y.s2 ^= local_AES1[UINT_BYTE2(X.s3)]; \
-        Y.s3 ^= local_AES2[UINT_BYTE1(X.s1)]; \
-    }
+    Y.s0  = local_AES0[UINT_BYTE3(X.s0)]; \
+    Y.s1  = local_AES0[UINT_BYTE3(X.s1)]; \
+    Y.s2  = local_AES0[UINT_BYTE3(X.s2)]; \
+    Y.s3  = local_AES0[UINT_BYTE3(X.s3)]; \
+    \
+    Y.s0 ^= local_AES1[UINT_BYTE2(X.s1)]; \
+    Y.s1 ^= local_AES1[UINT_BYTE2(X.s2)]; \
+    Y.s2 ^= local_AES1[UINT_BYTE2(X.s3)]; \
+    Y.s3 ^= local_AES1[UINT_BYTE2(X.s0)]; \
+    \
+    Y.s0 ^= local_AES2[UINT_BYTE1(X.s2)]; \
+    Y.s1 ^= local_AES2[UINT_BYTE1(X.s3)]; \
+    Y.s2 ^= local_AES2[UINT_BYTE1(X.s0)]; \
+    Y.s3 ^= local_AES2[UINT_BYTE1(X.s1)]; \
+    \
+    Y.s0 ^= local_AES3[UINT_BYTE0(X.s3)]; \
+    Y.s1 ^= local_AES3[UINT_BYTE0(X.s0)]; \
+    Y.s2 ^= local_AES3[UINT_BYTE0(X.s1)]; \
+    Y.s3 ^= local_AES3[UINT_BYTE0(X.s2)]; \
+}
 
 #define AES_ROUND_NOKEY(x)   { \
         uint4 t = x; \
