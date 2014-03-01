@@ -39,4 +39,10 @@ uchar4 MAKE_UCHAR4(uchar a, uchar b, uchar c, uchar d) { uchar4 temp = ((uchar4)
 #define SWAP32(x)   (as_uint(as_uchar4(x).s3210))
 #define SWAP64(x)   (as_ulong(as_uchar8(x).s76543210))
 
+#ifdef LOCAL_HASHES
+#define HASHES_MODIFIER __local
+#else
+#define HASHES_MODIFIER
+#endif
+
 #endif

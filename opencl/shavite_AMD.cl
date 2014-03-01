@@ -33,7 +33,7 @@
 
 
 void
-shavite(uint* restrict in_out,
+shavite(HASHES_MODIFIER uint* restrict in_out,
         local uint* restrict local_AES0,
         local uint* restrict local_AES1,
         local uint* restrict local_AES2,

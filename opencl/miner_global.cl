@@ -110,9 +110,9 @@ shavite_step(global ulong* restrict in_out,
 
 	event_t e;
 	e = async_work_group_copy(shavite_lookup0, AES, 256, 0);
-	e = async_work_group_copy(shavite_lookup1, AES+256, 256, 0);
-	e = async_work_group_copy(shavite_lookup2, AES+512, 256, 0);
-	e = async_work_group_copy(shavite_lookup3, AES+768, 256, 0);
+	e = async_work_group_copy(shavite_lookup1, AES+256, 256, e);
+	e = async_work_group_copy(shavite_lookup2, AES+512, 256, e);
+	e = async_work_group_copy(shavite_lookup3, AES+768, 256, e);
 
     // prepares data
     #pragma unroll 8

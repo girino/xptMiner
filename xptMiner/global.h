@@ -43,7 +43,7 @@ typedef struct
 
 #include"transaction.h"
 
-enum GPUALGO { CONSTANT_MEMSPACE = 1, GLOBAL_MEMSPACE };
+enum GPUALGO { CONSTANT_MEMSPACE = 1, GLOBAL_MEMSPACE, SINGLE };
 
 // global settings for miner
 typedef struct  

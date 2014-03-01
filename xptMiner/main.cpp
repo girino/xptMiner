@@ -278,7 +278,7 @@ void xptMiner_xptQueryWorkLoop()
 				}
 				else
       LeaveCriticalSection(&cs_xptClient);
-				Sleep(1);
+				Sleep(20);
 			}
 		}
 		else
@@ -298,7 +298,7 @@ void xptMiner_xptQueryWorkLoop()
 				miningStartTime = (uint32)time(NULL);
 				totalCollisionCount = 0;
 			}
-			Sleep(1);
+			Sleep(20);
 		}
 	}
 }
@@ -344,7 +344,7 @@ void xptMiner_parseCommandline(int argc, char **argv)
 {
 	sint32 cIdx = 1;
 	commandlineInput.donationPercent = 3.0f;
-	commandlineInput.algo = GLOBAL_MEMSPACE;
+	commandlineInput.algo = SINGLE;
 	commandlineInput.step_size = 0x80000;
 	while( cIdx < argc )
 	{
@@ -459,6 +459,8 @@ void xptMiner_parseCommandline(int argc, char **argv)
 				commandlineInput.algo = CONSTANT_MEMSPACE;
 			} else if (tmp_algo == 2) {
 				commandlineInput.algo = GLOBAL_MEMSPACE;
+			} else if (tmp_algo == 3) {
+				commandlineInput.algo = SINGLE;
 			} else {
 				printf("-a parameter out of range. Valid values are \"1\" for constant and \"2\" for global memspace.");
 				exit(0);
@@ -618,6 +620,8 @@ sysctl(mib, 2, &numcpu, &len, NULL, 0);
 			gpu_processors.push_back(new MetiscoinOpenCLConstant(commandlineInput.deviceList[i], commandlineInput.step_size));
 		} else if (commandlineInput.algo == GLOBAL_MEMSPACE) {
 			gpu_processors.push_back(new MetiscoinOpenCLGlobal(commandlineInput.deviceList[i], commandlineInput.step_size));
+		} else if (commandlineInput.algo == SINGLE) {
+			gpu_processors.push_back(new MetiscoinOpenCLSingle(commandlineInput.deviceList[i], commandlineInput.step_size));
 		}
 		printf("Device %d Inited.\n", i);
 	}

@@ -76,7 +76,7 @@
 
 
 void
-metis(uint *in_out,
+metis(HASHES_MODIFIER uint *in_out,
       local uint* restrict local_mixtab0,
       local uint* restrict local_mixtab1,
       local uint* restrict local_mixtab2,

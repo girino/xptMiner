@@ -61,4 +61,17 @@ private:
 	OpenCLBuffer* fugue_lookup;
 };
 
+class MetiscoinOpenCLSingle : public MetiscoinOpenCL {
+public:
+
+	MetiscoinOpenCLSingle(int _device_num, uint32_t _step_size);
+	void metiscoin_process(minerMetiscoinBlock_t* block);
+private:
+
+	OpenCLKernel* kernel_single_noinit;
+
+	OpenCLBuffer* shavite_lookup;
+	OpenCLBuffer* fugue_lookup;
+};
+
 #endif
