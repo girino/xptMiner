@@ -480,7 +480,7 @@ MetiscoinOpenCLSingle::MetiscoinOpenCLSingle(int _device_num, uint32_t _step_siz
 #ifdef DEBUG_WORKGROUP_SIZE
 	printf ("wg_size = %d => %d\n", wg_size, 1 << log2(wg_size));
 #endif
-	wg_size = 1 << log2(wg_size); // guarantees to be a power of 2
+	if (STEP_SIZE % wg_size != 0) wg_size = 1 << log2(wg_size); // guarantees to be a multiple
 
 	// params
 	//kernel void keccak_step_noinit(constant const ulong* u, constant const char* buff, global ulong* out, uint begin_nonce)
