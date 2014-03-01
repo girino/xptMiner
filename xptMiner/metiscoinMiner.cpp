@@ -473,7 +473,10 @@ MetiscoinOpenCLSingle::MetiscoinOpenCLSingle(int _device_num, uint32_t _step_siz
 	wg_size = kernel_single_noinit->getWorkGroupSize(device);
 	// checks if there's enough local mem for the kernel
 	size_t max_mem = device->getMaxMemAllocSize();
-	if (max_mem/(8*sizeof(cl_ulong)) < wg_size) wg_size = max_mem/(8*sizeof(cl_ulong));
+	size_t local_mem = device->getLocalMemSize();
+	size_t reserved_mem = 8 * 256 * sizeof(cl_uint);
+	if ((max_mem-reserved_mem)/(8*sizeof(cl_ulong)) < wg_size) wg_size = (max_mem-reserved_mem)/(8*sizeof(cl_ulong));
+	if ((local_mem-reserved_mem)/(8*sizeof(cl_ulong)) < wg_size) wg_size = (local_mem-reserved_mem)/(8*sizeof(cl_ulong));
 #ifdef DEBUG_WORKGROUP_SIZE
 	printf ("wg_size = %d => %d\n", wg_size, 1 << log2(wg_size));
 #endif
