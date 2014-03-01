@@ -19,15 +19,13 @@ LIBS =
 
 ifeq ($(OSVERSION),Linux)
 	LIBS += -lrt -lOpenCL
-	CFLAGS += -march=native
-	CXXFLAGS += -march=native
 endif
 
 ifeq ($(OSVERSION),FreeBSD)
 	CXX = clang++
 	CC = clang
-	CFLAGS += -DHAVE_DECL_LE32DEC -march=native
-	CXXFLAGS += -DHAVE_DECL_LE32DEC -march=native
+	CFLAGS += -DHAVE_DECL_LE32DEC
+	CXXFLAGS += -DHAVE_DECL_LE32DEC
 endif
 
 # You might need to edit these paths too

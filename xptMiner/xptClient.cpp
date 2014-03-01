@@ -509,7 +509,11 @@ bool xptClient_process(xptClient_t* xptClient)
 	if( r <= 0 )
 	{
 		// receive error, is it a real error or just because of non blocking sockets?
-		if( WSAGetLastError() != WSAEWOULDBLOCK )
+		if( WSAGetLastError() != WSAEWOULDBLOCK
+#ifdef __linux__
+		|| r == 0
+#endif
+		  ) // closes the "if". Linux does not give an error on disconnect
 		{
 			xptClient->disconnected = true;
 			return false;
